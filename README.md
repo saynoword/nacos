@@ -108,9 +108,15 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 
 ### WeChat & DingTalk Groups
 
-| DingTalk Group | MCP Group | WeChat Group |
-|:--------------:|:---------:|:------------:|
-| <img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054497446-f834cba6-fa83-4421-b202-a0dc1d5cc28b.png" width="200" /> | <img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054500395-e271cbe4-2dd8-4723-8cd0-bd8a731b812a.png" width="200" /> | <img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054421702-a7d1421a-ab8e-42da-bc59-01b5d287b290.png" width="200" /> |
+<table>
+<tr>
+<td align="center" width="20%"><img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054497446-f834cba6-fa83-4421-b202-a0dc1d5cc28b.png" width="200" /><br/>DingTalk Group</td>
+<td align="center" width="20%"><img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054500395-e271cbe4-2dd8-4723-8cd0-bd8a731b812a.png" width="200" /><br/>MCP Group</td>
+<td align="center" width="20%"><img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054421702-a7d1421a-ab8e-42da-bc59-01b5d287b290.png" width="200" /><br/>WeChat Group</td>
+<td align="center" width="20%"></td>
+<td align="center" width="20%"></td>
+</tr>
+</table>
 
 ## Enterprise Service
 
