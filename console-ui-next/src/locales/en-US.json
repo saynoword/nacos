@@ -106,6 +106,15 @@
       "title": "Tags",
       "description": "Edit the business tag list."
     },
+    "labelManager": {
+      "title": "Label Management",
+      "description": "Manage version labels. Each label points to a specific version. The \"latest\" label cannot be deleted.",
+      "addLabel": "Add New Label",
+      "protected": "Protected",
+      "latestProtectionHint": "The \"latest\" label cannot be deleted, but its target version can be changed.",
+      "versionRequired": "Please select a version",
+      "cannotOfflineLatest": "Cannot offline the version bound to the \"latest\" label. Please reassign \"latest\" to another version first."
+    },
     "cliUsage": {
       "title": "Install",
       "cliInstall": "CLI Install",

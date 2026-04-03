@@ -106,6 +106,15 @@
       "title": "业务标签",
       "description": "编辑业务标签列表。"
     },
+    "labelManager": {
+      "title": "标签管理",
+      "description": "管理版本标签，每个标签指向一个特定版本。\"latest\" 标签不可删除。",
+      "addLabel": "添加新标签",
+      "protected": "受保护",
+      "latestProtectionHint": "\"latest\" 标签不可删除，但可以修改其指向的版本。",
+      "versionRequired": "请选择一个版本",
+      "cannotOfflineLatest": "无法下线 \"latest\" 标签指向的版本，请先将 \"latest\" 标签重新指向其他版本。"
+    },
     "cliUsage": {
       "title": "安装",
       "cliInstall": "CLI 安装",
