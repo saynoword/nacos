@@ -14,9 +14,7 @@
 
 ## AI Registry - Unified Registration and Governance for AI Resources
 
-Nacos 3.x introduces **AI Registry**, extending Nacos from microservices governance to AI resource governance. Built on a unified `AiResource` abstraction, it provides a general-purpose platform for registering, discovering, and managing any type of AI resource - with enterprise-grade security, version control, and publish pipelines. Prompt, MCP, A2A, Skills, and AgentSpec are supported today, and any future AI resource type can be managed through the same extensible framework.
-
-### Supported Resource Types
+Nacos 3.x introduces **AI Registry**, extending Nacos from microservices governance to AI resource governance. Skills, Prompt, MCP Server, A2A Agent, and AgentSpec are supported today, and the extensible framework makes it easy to manage any future AI resource type.
 
 | Resource | Description |
 |----------|-------------|
@@ -24,14 +22,12 @@ Nacos 3.x introduces **AI Registry**, extending Nacos from microservices governa
 | **Prompt** | Register, version, and dynamically push prompt templates across environments |
 | **MCP Server** | Register and discover [MCP](https://modelcontextprotocol.io/) servers with health checks and load balancing |
 | **A2A Agent** | [Agent-to-Agent](https://google.github.io/A2A/) registration and discovery for multi-agent collaboration |
-| **AgentSpec** | Register and manage agent specifications, packaging agent definitions as discoverable resources |
+| **AgentSpec** | Register and manage agent specifications as discoverable resources |
 
-### Enterprise-Grade Governance
-
-- **Security** - Full `@Secured` coverage with dedicated `SignType.AI`, role-based access control, resource visibility management (public/private), and force-publish restricted to admin
-- **Version Management** - Unified lifecycle for all resources (`draft -> reviewing -> online <-> offline`), multi-version coexistence, label-based routing (e.g. `latest`), and fork from history for rollback
-- **Publish Pipeline** - Pluggable review pipeline (SPI) with checkpoint-based auditing. Resources must pass all pipeline checks before going online, ensuring quality and compliance
-- **Dynamic Push** - Built on Nacos Config's proven push mechanism. Changes propagate to clients in real-time without redeployment
+- **Security** - Access control, resource visibility (public/private), and encrypted transport
+- **Version Management** - Full lifecycle management, multi-version coexistence, label-based routing, and rollback
+- **Publish Pipeline** - Pluggable review pipeline with checkpoint-based auditing before going online
+- **Dynamic Push** - Real-time propagation of changes to clients without redeployment
 
 ---
 
@@ -56,9 +52,9 @@ docker run --name nacos-standalone -e MODE=standalone -p 8848:8848 -p 9848:9848 
 
 ---
 
-## Core Features
+## Microservices - Service Discovery and Configuration Management
 
-Nacos also provides essential capabilities for cloud-native microservices:
+Nacos provides essential capabilities for cloud-native microservices:
 
 - **Service Discovery** - Register and discover services via DNS or HTTP, with real-time health checks
 - **Dynamic Configuration** - Centralized configuration management across all environments
@@ -108,13 +104,11 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 
 ### WeChat & DingTalk Groups
 
-<table>
+<table width="100%">
 <tr>
-<td align="center" width="20%"><img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054497446-f834cba6-fa83-4421-b202-a0dc1d5cc28b.png" width="200" /><br/>DingTalk Group</td>
-<td align="center" width="20%"><img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054500395-e271cbe4-2dd8-4723-8cd0-bd8a731b812a.png" width="200" /><br/>MCP Group</td>
-<td align="center" width="20%"><img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054421702-a7d1421a-ab8e-42da-bc59-01b5d287b290.png" width="200" /><br/>WeChat Group</td>
-<td align="center" width="20%"></td>
-<td align="center" width="20%"></td>
+<td align="center" width="33%"><img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054497446-f834cba6-fa83-4421-b202-a0dc1d5cc28b.png" width="200" /><br/>DingTalk Group</td>
+<td align="center" width="33%"><img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054500395-e271cbe4-2dd8-4723-8cd0-bd8a731b812a.png" width="200" /><br/>MCP Group</td>
+<td align="center" width="34%"><img src="https://cdn.nlark.com/yuque/0/2025/png/1577777/1750054421702-a7d1421a-ab8e-42da-bc59-01b5d287b290.png" width="200" /><br/>WeChat Group</td>
 </tr>
 </table>
 
@@ -131,47 +125,61 @@ For enterprise support or Alibaba Cloud MSE service: [Alibaba Cloud MSE](https:/
 
 These are only part of the companies using Nacos, for reference only. If you are using Nacos, please [add your company here](https://github.com/alibaba/nacos/issues/273) to tell us your scenario to make Nacos better.
 
-<table>
+<table width="100%">
 <tr>
-<td align="center"><img src="https://data.alibabagroup.com/ecms-files/886024452/296d05a1-c52a-4f5e-abf2-0d49d4c0d6b3.png" height="60" alt="Alibaba" /></td>
-<td align="center"><img src="https://a.msstatic.com/huya/main/img/logo.png" height="60" alt="Huya" /></td>
+<td align="center"><img src="https://data.alibabagroup.com/ecms-files/886024452/296d05a1-c52a-4f5e-abf2-0d49d4c0d6b3.png" height="60" alt="Alibaba Group" /></td>
+<td align="center"><img src="https://a.msstatic.com/huya/main/img/logo.png" height="60" alt="虎牙直播" /></td>
 <td align="center"><img src="https://v.icbc.com.cn/userfiles/Resources/ICBC/shouye/images/2017/logo.png" height="60" alt="ICBC" /></td>
-<td align="center"><img src="https://pic2.iqiyipic.com/lequ/20220422/e7fe69c75e2541f2a931c9e538e2ab9d.jpg" height="60" alt="iQIYI" /></td>
-<td align="center"><img src="https://img.alicdn.com/tfs/TB1pwi9EwHqK1RjSZJnXXbNLpXa-479-59.png" height="60" alt="PingAn" /></td>
+<td align="center"><img src="https://pic2.iqiyipic.com/lequ/20220422/e7fe69c75e2541f2a931c9e538e2ab9d.jpg" height="60" alt="爱奇艺" /></td>
+<td align="center"><img src="https://img.alicdn.com/tfs/TB1pwi9EwHqK1RjSZJnXXbNLpXa-479-59.png" height="60" alt="平安科技" /></td>
 </tr>
 <tr>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1MZWSEzDpK1RjSZFrXXa78VXa-269-69.png" height="60" alt="华夏信财" /></td>
+<td align="center"><img src="https://www.urwork.cn/public/images/ui/logo.png" height="60" alt="优客工场" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1ebu.EAvoK1RjSZFwXXciCFXa-224-80.png" height="60" alt="贝壳找房" /></td>
-<td align="center"><img src="https://img.alicdn.com/tfs/TB1lxu7EBLoK1RjSZFuXXXn0XXa-409-74.png" height="60" alt="瑞安农商银行" /></td>
+<td align="center"><img src="https://img.alicdn.com/tfs/TB1lxu7EBLoK1RjSZFuXXXn0XXa-409-74.png" height="60" alt="瑞安农村商业银行" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1L16eEzTpK1RjSZKPXXa3UpXa-302-50.png" height="60" alt="司法大数据" /></td>
-<td align="center"><img src="https://img.alicdn.com/tfs/TB1OigyDyLaK1RjSZFxXXamPFXa-168-70.png" height="60" alt="平行云" /></td>
 </tr>
 <tr>
+<td align="center"><img src="https://www.souyidai.com/www-style/images/logo.gif" height="60" alt="搜易贷" /></td>
+<td align="center"><img src="https://img.alicdn.com/tfs/TB1OigyDyLaK1RjSZFxXXamPFXa-168-70.png" height="60" alt="平行云" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1gJ4vIhTpK1RjSZR0XXbEwXXa-462-60.jpg" height="60" alt="甘肃紫光" /></td>
+<td align="center"><img src="http://www.seaskylight.com/cn/uploadfiles/image/logo.png" height="60" alt="海云天" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1DZWSEzDpK1RjSZFrXXa78VXa-240-62.png" height="60" alt="Acmedcare+" /></td>
+</tr>
+<tr>
+<td align="center"><img src="https://14605854.s21i.faiusr.com/4/ABUIABAEGAAg4OvkzwUo8b-qlwUwxQ449gM!300x300.png" height="60" alt="北京天合互联信息有限公司" /></td>
+<td align="center"><img src="http://www.mwclg.com/static-resource/front/images/home/img_logo_nav.png" height="60" alt="上海密尔克卫化工" /></td>
+<td align="center"><img src="https://www.synwe.com/logo-full.png" height="60" alt="大连新唯" /></td>
 <td align="center"><img src="https://user-images.githubusercontent.com/10215557/51593180-7563af00-1f2c-11e9-95b1-ec2c645d6a0b.png" height="60" alt="立思辰" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1zWW2EpYqK1RjSZLeXXbXppXa-262-81.png" height="60" alt="东家" /></td>
-<td align="center"><img src="https://img.alicdn.com/tfs/TB1G216EsbpK1RjSZFyXXX_qFXa-325-53.jpg" height="60" alt="南京28研究所" /></td>
 </tr>
 <tr>
-<td align="center"><img src="https://p1.ifengimg.com/auto/image/2017/0922/auto_logo.png" height="60" alt="凤凰网汽车" /></td>
+<td align="center"><img src="http://www.sh-guiyao.com/images/logo.jpg" height="60" alt="上海克垚" /></td>
+<td align="center"><img src="http://www.lckjep.com:80//theme/img/logoTop.png" height="60" alt="联采科技" /></td>
+<td align="center"><img src="https://img.alicdn.com/tfs/TB1G216EsbpK1RjSZFyXXX_qFXa-325-53.jpg" height="60" alt="南京28研究所" /></td>
+<td align="center"><img src="https://p1.ifengimg.com/auto/image/2017/0922/auto_logo.png" height="60" alt="凤凰网-汽车" /></td>
+<td align="center"><img src="http://www.sinochemitech.com/zhxx/lib/images/-logo.png" height="60" alt="中化信息" /></td>
+</tr>
+<tr>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1DXerNgDqK1RjSZSyXXaxEVXa-333-103.png" height="60" alt="一点车" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1VfOANgHqK1RjSZFPXXcwapXa-313-40.png" height="60" alt="明传无线" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1lvCyNhTpK1RjSZFMXXbG_VXa-130-60.png" height="60" alt="妙优车" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1kY9qNgTqK1RjSZPhXXXfOFXa-120-50.png" height="60" alt="蜂巢" /></td>
+<td align="center"><img src="https://img.alicdn.com/tfs/TB1G.GBNbrpK1RjSZTEXXcWAVXa-234-65.png" height="60" alt="华存数据" /></td>
 </tr>
 <tr>
-<td align="center"><img src="https://img.alicdn.com/tfs/TB1G.GBNbrpK1RjSZTEXXcWAVXa-234-65.png" height="60" alt="华存数据" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1qsurNgDqK1RjSZSyXXaxEVXa-300-90.png" height="60" alt="数云" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB13aywNhTpK1RjSZR0XXbEwXXa-98-38.png" height="60" alt="广通软件" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1xqmBNjTpK1RjSZKPXXa3UpXa-162-70.png" height="60" alt="菜菜" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB18DmINcfpK1RjSZFOXXa6nFXa-200-200.png" height="60" alt="科蓝公司" /></td>
+<td align="center"><img src="https://img.alicdn.com/tfs/TB15uqANXzqK1RjSZFoXXbfcXXa-188-86.png" height="60" alt="浩鲸" /></td>
 </tr>
 <tr>
-<td align="center"><img src="https://img.alicdn.com/tfs/TB15uqANXzqK1RjSZFoXXbfcXXa-188-86.png" height="60" alt="浩鲸" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1mvmyNkvoK1RjSZPfXXXPKFXa-238-46.png" height="60" alt="未名天日语" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1PSWsNmrqK1RjSZK9XXXyypXa-195-130.jpg" height="60" alt="金联创" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1k1qzNbvpK1RjSZFqXXcXUVXa-160-69.png" height="60" alt="同窗链" /></td>
+<td align="center"><img src="https://img.alicdn.com/tfs/TB1HdyvNmzqK1RjSZFLXXcn2XXa-143-143.jpg" height="60" alt="顺能" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1UdaGNgHqK1RjSZJnXXbNLpXa-277-62.png" height="60" alt="百世快递" /></td>
 </tr>
 <tr>
@@ -183,7 +191,7 @@ These are only part of the companies using Nacos, for reference only. If you are
 </tr>
 <tr>
 <td align="center"><img src="https://avatars0.githubusercontent.com/u/16344119?s=200&v=4" height="60" alt="Nepxion" /></td>
-<td align="center"><img src="https://img.alicdn.com/tfs/TB1aUe5EpzqK1RjSZSgXXcpAVXa-248-124.png" height="60" alt="吃瓜" /></td>
+<td align="center"><img src="https://img.alicdn.com/tfs/TB1aUe5EpzqK1RjSZSgXXcpAVXa-248-124.png" height="60" alt="chigua" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1H9O5EAvoK1RjSZFNXXcxMVXa-221-221.jpg" height="60" alt="宅无限" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1rNq4EwHqK1RjSZFgXXa7JXXa-200-200.jpg" height="60" alt="天阙" /></td>
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1CRAxDxYaK1RjSZFnXXa80pXa-190-190.jpg" height="60" alt="联合永道" /></td>
@@ -192,8 +200,22 @@ These are only part of the companies using Nacos, for reference only. If you are
 <td align="center"><img src="https://img.alicdn.com/tfs/TB1.q14ErrpK1RjSZTEXXcWAVXa-219-219.jpg" height="60" alt="明源云" /></td>
 <td align="center"><img src="https://www.daocloud.io/static/Logo-Light.png" height="60" alt="DaoCloud" /></td>
 <td align="center"><img src="https://www.meicai.cn/img/logo.9210b6eb.jpg" height="60" alt="美菜" /></td>
+<td align="center"><img src="https://img5.tianyancha.com/logo/lll/3aad34039972b57e70874df8c919ae8b.png@!f_200x200" height="60" alt="松格科技" /></td>
+<td align="center"><img src="https://www.jsic-tech.com/Public/uploads/20191206/5de9b9baac696.jpg" height="60" alt="集萃智能" /></td>
+</tr>
+<tr>
+<td align="center"><img src="https://www.wuuxiang.com/theme/images/common/logo1.png" height="60" alt="吾享" /></td>
+<td align="center"><img src="http://www.tpson.cn/static/upload/image/20230111/1673427385140440.png" height="60" alt="拓深科技" /></td>
 <td align="center"><img src="https://www.sunline.cn/u_file/fileUpload/2021-06/25/2021062586431.png" height="60" alt="长亮科技" /></td>
+<td align="center"><img src="http://pmt2f499f.pic44.websiteonline.cn/upload/wv0c.png" height="60" alt="深圳易停车库" /></td>
+<td align="center"><img src="http://www.dragonwake.cn/static/css/default/img/logo.png" height="60" alt="武汉日创科技" /></td>
+</tr>
+<tr>
+<td align="center"><img src="https://i4im-web.oss-cn-shanghai.aliyuncs.com/images/logo.png" height="60" alt="易管智能" /></td>
+<td align="center"><img src="" height="60" alt="云帐房" /></td>
 <td align="center"><img src="https://www.sinocare.com/sannuo/templates/web/img/bocweb-logo.svg" height="60" alt="三诺生物" /></td>
+<td align="center">郑州山水</td>
+<td align="center">知氏教育</td>
 </tr>
 </table>
 
