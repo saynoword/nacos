@@ -901,7 +901,7 @@ export default function SkillDetailPage() {
                             {t('skill.deleteDraft')}
                           </Button>
                           {currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
-                            <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact />
+                            <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton />
                           )}
                           {/* Admin-only force-publish when pipeline rejected */}
                           {globalAdmin && currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
@@ -936,12 +936,12 @@ export default function SkillDetailPage() {
                           : t('skill.publish')}
                       </Button>
                       {currentPipelineInfo && currentPipelineInfo.status === 'APPROVED' && (
-                        <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact />
+                        <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton />
                       )}
                       {/* Admin-only force-publish when pipeline rejected during reviewing */}
                       {globalAdmin && currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
                         <>
-                          <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact />
+                          <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton />
                           <Button
                             variant="outline"
                             size="sm"

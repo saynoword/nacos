@@ -757,7 +757,7 @@ export default function PromptDetailPage() {
                             : t('prompt.publish')}
                         </Button>
                         {currentPipelineInfo && (
-                          <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact />
+                          <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton />
                         )}
                       </>
                     )}

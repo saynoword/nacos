@@ -42,6 +42,8 @@ interface PipelineStatusInfo {
 interface PipelineStatusDisplayProps {
   pipelineInfo: PipelineStatusInfo | null;
   compact?: boolean;
+  /** Match height of adjacent `Button` `size="sm"` (`h-7`) in compact mode. */
+  compactAlignButton?: boolean;
   translationPrefix?: 'skill' | 'agentSpec';
   onRefresh?: () => void;
   refreshing?: boolean;
@@ -330,6 +332,7 @@ function PipelineDetailDialog({
 export function PipelineStatusDisplay({
   pipelineInfo,
   compact = false,
+  compactAlignButton = false,
   translationPrefix = 'skill',
   onRefresh,
   refreshing,
@@ -347,11 +350,26 @@ export function PipelineStatusDisplay({
   const config = STATUS_CONFIG[pipelineInfo.status];
   const StatusIcon = config.icon;
 
-  // Compact badge mode (for Timeline inline)
+  // Compact badge mode (timeline inline = short chip; detail action row = match h-7 buttons)
   if (compact) {
+    const actionRow = compactAlignButton;
+    const statusBorder =
+      pipelineInfo.status === 'REJECTED'
+        ? '!border-destructive/40'
+        : pipelineInfo.status === 'APPROVED'
+          ? '!border-emerald-200/70 dark:!border-emerald-800/60'
+          : '!border-blue-200/70 dark:!border-blue-800/60';
     return (
-      <Badge className={cn('text-[10px] px-1.5 py-0 h-4 font-medium border-0 gap-1', config.badgeClass)}>
-        <StatusIcon className={cn('h-2.5 w-2.5', config.iconClass)} />
+      <Badge
+        className={cn(
+          'inline-flex items-center font-medium shrink-0',
+          actionRow
+            ? cn('h-7 min-h-7 text-xs px-2.5 py-0 gap-1.5 rounded-md border', statusBorder)
+            : 'text-[10px] px-1.5 py-0 h-4 border-0 gap-1',
+          config.badgeClass,
+        )}
+      >
+        <StatusIcon className={cn(actionRow ? 'h-3 w-3' : 'h-2.5 w-2.5', config.iconClass)} />
         {t(`${translationPrefix}.${config.labelSuffix}`)}
       </Badge>
     );
