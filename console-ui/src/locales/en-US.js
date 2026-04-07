@@ -1052,6 +1052,8 @@ const I18N_CONF = {
     skillName: 'Name',
     skillId: 'Skill ID',
     search: 'Search',
+    bizTag: 'BizTag',
+    bizTagPlaceholder: 'Please enter business tag',
     details: 'Details',
     edit: 'Edit',
     delete: 'Delete',
