@@ -17,12 +17,12 @@ import {
   Pencil,
   Save,
   X,
-  GitBranch,
   Send,
   CheckCircle2,
   Power,
   PowerOff,
   Trash2,
+  User,
   Plus,
   Sparkles,
   AlertTriangle,
@@ -360,9 +360,10 @@ export default function SkillDetailPage() {
   // ===== Labels handler =====
 
   const handleSaveLabels = async (labels: Record<string, string>) => {
-    // Preserve the "latest" label as a safety measure
+    // Preserve "latest" only if it was removed (e.g. via version-centric LabelBindDialog);
+    // if the user explicitly changed its target version, respect that.
     const latestValue = currentDetail?.labels?.latest;
-    const merged = latestValue ? { ...labels, latest: latestValue } : labels;
+    const merged = (latestValue && !('latest' in labels)) ? { ...labels, latest: latestValue } : labels;
     await skillApi.updateLabels({
       namespaceId,
       skillName,
@@ -652,7 +653,6 @@ export default function SkillDetailPage() {
   const currentVersionStatusLabel = currentVersionStatus
     ? t(`skill.versionStatus.${currentVersionStatus}`)
     : '-';
-  const onlineVersionCountLabel = t('skill.onlineCount', { count: detail.onlineCnt ?? 0 });
 
   // Pipeline info for current version
   const currentPipelineInfo = parsePipelineInfo(currentVersionSummary?.publishPipelineInfo);
@@ -669,86 +669,26 @@ export default function SkillDetailPage() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-violet-500/[0.06] to-transparent rounded-full -translate-y-1/2 translate-x-1/3" />
 
         <div className="relative px-5 py-4">
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1.5 text-muted-foreground hover:text-foreground -ml-2"
-              onClick={() => navigate('/skill')}
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              {t('skill.backToList')}
-            </Button>
-
-            <div className="flex items-center gap-2">
-              {selectedVersion && (
-                <Select value={selectedVersion} onValueChange={handleSelectVersion} disabled={isEditingDraft}>
-                  <SelectTrigger className="w-[140px] h-7 text-xs bg-background/80">
-                    <SelectValue placeholder={t('skill.selectVersion')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {versionOptions.map((version) => {
-                      const vPipeline = parsePipelineInfo(version.publishPipelineInfo);
-                      const isVersionPendingPublish = version.status === 'reviewing' && vPipeline?.status === 'APPROVED';
-                      return (
-                      <SelectItem key={version.version} value={version.version}>
-                        <span className="flex items-center gap-2">
-                          <span>{version.version}</span>
-                          {latestVersion === version.version && (
-                            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 text-[10px] px-1 py-0 border-0">
-                              {t('skill.latestVersion')}
-                            </Badge>
-                          )}
-                          {version.status === 'draft' && (
-                            <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] px-1 py-0 border-0">
-                              {t('skill.versionStatus.draft')}
-                            </Badge>
-                          )}
-                          {version.status === 'reviewing' && (
-                            <Badge className={isVersionPendingPublish
-                              ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 text-[10px] px-1 py-0 border-0'
-                              : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 text-[10px] px-1 py-0 border-0'
-                            }>
-                              {t(isVersionPendingPublish ? 'skill.versionStatus.pendingPublish' : 'skill.versionStatus.reviewing')}
-                            </Badge>
-                          )}
-                        </span>
-                      </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setVersionSheetOpen(true)}
-                disabled={isEditingDraft}
-              >
-                <History className="mr-1 h-3 w-3" />
-                {t('skill.versionHistory')}
-              </Button>
-            </div>
-          </div>
+          {/* Back button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 text-muted-foreground hover:text-foreground -ml-2 mb-3"
+            onClick={() => navigate('/skill')}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {t('skill.backToList')}
+          </Button>
 
           {/* Identity */}
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-5">
+          <div className="flex items-start gap-4 flex-1 min-w-0">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-400 shadow-lg shadow-violet-500/20">
               <Wand2 className="h-7 w-7 text-white" />
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2.5 mb-1">
-                <h1 className="text-xl font-bold tracking-tight">{detail.name}</h1>
-                {selectedVersion && (
-                  <span className="text-xs text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded">
-                    {selectedVersion}
-                  </span>
-                )}
-              </div>
+              <h1 className="text-xl font-bold tracking-tight mb-1">{detail.name}</h1>
               {/* Enable & Scope toggle switches */}
               <div className="flex items-center gap-4 mt-1.5 mb-1">
                 <label className="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -796,97 +736,103 @@ export default function SkillDetailPage() {
                 </p>
               ) : null}
 
-              {/* Meta row */}
-              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <Globe className="h-3 w-3" />
-                  {onlineVersionCountLabel}
-                </span>
-                {detail.downloadCount > 0 && (
+              {/* Skill-level meta */}
+              <div className="mt-3 pt-2 border-t border-border/40">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                  {currentVersionSummary?.author && (
+                    <span className="inline-flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      {currentVersionSummary.author}
+                    </span>
+                  )}
+                  {detail.updateTime > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {dayjs(detail.updateTime).format('YYYY-MM-DD HH:mm')}
+                    </span>
+                  )}
+                  {detail.from && (
+                    <span className="inline-flex items-center gap-1">
+                      <Tag className="h-3 w-3" />
+                      {t('common.from')}: {detail.from}
+                    </span>
+                  )}
                   <span className="inline-flex items-center gap-1">
                     <Download className="h-3 w-3" />
-                    {t('skill.downloadCount', { count: detail.downloadCount })}
+                    {t('skill.downloads')}: {detail.downloadCount ?? 0}
                   </span>
-                )}
-                {detail.updateTime > 0 && (
-                  <span className="inline-flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {dayjs(detail.updateTime).format('YYYY-MM-DD HH:mm')}
-                  </span>
-                )}
-                {detail.from && (
-                  <span className="inline-flex items-center gap-1">
-                    <Tag className="h-3 w-3" />
-                    {t('common.from')}: {detail.from}
-                  </span>
-                )}
+                </div>
               </div>
 
-              {/* BizTags & Labels cards */}
-              <div className="flex gap-3 mt-3">
-                <Card className="flex-1 overflow-hidden py-0 gap-0">
-                  <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
-                    <h2 className="text-xs font-semibold flex items-center gap-1.5">
-                      <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                      {t('common.bizTags')}
-                    </h2>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setBizTagDialogOpen(true)}>
-                      <Pencil className="h-2.5 w-2.5" />
+              {/* Version Panel */}
+              {selectedVersion && (
+                <div className="mt-3 pt-3 border-t border-border/40 space-y-2.5">
+                  {/* Version info row */}
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <Select value={selectedVersion} onValueChange={handleSelectVersion} disabled={isEditingDraft}>
+                      <SelectTrigger className="h-7 text-xs bg-background/80 w-auto gap-1.5 font-mono">
+                        <SelectValue placeholder={t('skill.selectVersion')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {versionOptions.map((version) => {
+                          const vPipeline = parsePipelineInfo(version.publishPipelineInfo);
+                          const isVersionPendingPublish = version.status === 'reviewing' && vPipeline?.status === 'APPROVED';
+                          return (
+                          <SelectItem key={version.version} value={version.version}>
+                            <span className="flex items-center gap-2">
+                              <span>{version.version}</span>
+                              {latestVersion === version.version && (
+                                <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 text-[10px] px-1 py-0 border-0">
+                                  {t('skill.latestVersion')}
+                                </Badge>
+                              )}
+                              {version.status === 'draft' && (
+                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] px-1 py-0 border-0">
+                                  {t('skill.versionStatus.draft')}
+                                </Badge>
+                              )}
+                              {version.status === 'reviewing' && (
+                                <Badge className={isVersionPendingPublish
+                                  ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 text-[10px] px-1 py-0 border-0'
+                                  : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 text-[10px] px-1 py-0 border-0'
+                                }>
+                                  {t(isVersionPendingPublish ? 'skill.versionStatus.pendingPublish' : 'skill.versionStatus.reviewing')}
+                                </Badge>
+                              )}
+                            </span>
+                          </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs shrink-0 gap-1 text-muted-foreground"
+                      onClick={() => setVersionSheetOpen(true)}
+                      disabled={isEditingDraft}
+                    >
+                      <History className="h-3 w-3" />
+                      {t('skill.versionHistory')}
                     </Button>
+                    {currentVersionStatus && (
+                      <StatusBadge status={currentVersionStatus} label={currentVersionStatusLabel} />
+                    )}
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Download className="h-3 w-3" />
+                      {t('skill.versionDownloads')}: {currentVersionSummary?.downloadCount ?? 0}
+                    </span>
                   </div>
-                  <CardContent className="px-3 py-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {bizTags.length > 0 ? (
-                        bizTags.map((tag) => <DetailTagChip key={tag} label={tag} />)
-                      ) : (
-                        <span className="text-xs text-muted-foreground">{t('skill.noBizTags')}</span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="flex-1 overflow-hidden py-0 gap-0">
-                  <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
-                    <h2 className="text-xs font-semibold flex items-center gap-1.5">
-                      <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                      {t('common.versionLabels.title')}
-                    </h2>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setLabelDialogOpen(true)}>
-                      <Pencil className="h-2.5 w-2.5" />
-                    </Button>
-                  </div>
-                  <CardContent className="px-3 py-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {Object.entries(detail.labels || {}).length > 0 ? (
-                        Object.entries(detail.labels || {}).map(([key, val]) => (
-                          <Badge
-                            key={key}
-                            variant={key === 'latest' ? 'default' : 'secondary'}
-                            className={cn(
-                              'text-[10px] px-1.5 py-0 font-mono',
-                              key === 'latest' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-0',
-                            )}
-                          >
-                            {key} → {val}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-xs text-muted-foreground">{t('common.versionLabels.noLabels')}</span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
 
-              {/* Version lifecycle action buttons */}
-              {selectedVersion && currentVersionStatus && (
-                <div className="mt-3 pt-3 border-t border-border/40">
-                  {!detail.enable && (
-                    <p className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 mb-2">
+                  {/* Action buttons */}
+                  {currentVersionStatus && !detail.enable && (
+                    <p className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="h-3 w-3 shrink-0" />
                       {t('skill.skillDisabledWarning')}
                     </p>
                   )}
-                  <div className="flex items-center gap-2">
+                  {currentVersionStatus && (
+                  <div className="flex items-center gap-2 flex-wrap">
                   {/* Draft actions */}
                   {currentVersionStatus === 'draft' && (
                     <>
@@ -1068,6 +1014,22 @@ export default function SkillDetailPage() {
                     ) : btn;
                   })()}
                   </div>
+                  )}
+
+                  {/* Pipeline status */}
+                  {currentPipelineInfo && (
+                    <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} onRefresh={() => loadDetail()} />
+                  )}
+
+                  {/* Install */}
+                  {currentVersionStatus !== 'draft' && (
+                    <CliCommandCard
+                      commands={cliCommands}
+                      onDownload={() => handleDownload(selectedVersion)}
+                      downloadFileName={`${skillName}-${selectedVersion}.zip`}
+                      className="shadow-none"
+                    />
+                  )}
                 </div>
               )}
 
@@ -1113,8 +1075,63 @@ export default function SkillDetailPage() {
               )}
             </div>
           </div>
+
+          </div>
         </div>
       </div>
+
+      {/* BizTags & Labels */}
+      <Card className="overflow-hidden py-0 gap-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" />
+                {t('common.bizTags')}
+              </span>
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setBizTagDialogOpen(true)}>
+                <Pencil className="h-2.5 w-2.5" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap min-h-[24px]">
+              {bizTags.length > 0 ? (
+                bizTags.map((tag) => <DetailTagChip key={tag} label={tag} />)
+              ) : (
+                <span className="text-xs text-muted-foreground">{t('skill.noBizTags')}</span>
+              )}
+            </div>
+          </div>
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" />
+                {t('common.versionLabels.title')}
+              </span>
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setLabelDialogOpen(true)}>
+                <Pencil className="h-2.5 w-2.5" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap min-h-[24px]">
+              {Object.entries(detail.labels || {}).length > 0 ? (
+                Object.entries(detail.labels || {}).map(([key, val]) => (
+                  <Badge
+                    key={key}
+                    variant={key === 'latest' ? 'default' : 'secondary'}
+                    className={cn(
+                      'text-[10px] px-1.5 py-0 font-mono',
+                      key === 'latest' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-0',
+                    )}
+                  >
+                    {key} → {val}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-xs text-muted-foreground">{t('common.versionLabels.noLabels')}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* ===== Tabs Content ===== */}
       <Tabs defaultValue="overview" className={cn('flex flex-col', (detailLoading || actionLoading) && 'opacity-50 pointer-events-none')}>
@@ -1134,110 +1151,55 @@ export default function SkillDetailPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Overview tab: Instruction + Sidebar */}
+        {/* Overview tab: Instruction */}
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-            {/* Left: Instruction card */}
-            <Card className="overflow-hidden py-0 gap-0 min-h-[580px]">
-              <div className="px-5 py-3.5 border-b bg-muted/30">
-                <h2 className="text-sm font-semibold flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  {t('skill.skillMd')}
-                </h2>
-              </div>
-              <CardContent className="p-5">
-                {docLoading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                ) : isEditingDraft ? (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">{t('skill.skillMdHint')}</p>
-                    <div data-color-mode="light" className="dark:hidden">
-                      <MDEditor
-                        value={editInstruction}
-                        onChange={handleInstructionChange}
-                        height={500}
-                        preview="live"
-                        previewOptions={{ remarkPlugins: [remarkGfm, remarkFrontmatter] }}
-                      />
-                    </div>
-                    <div data-color-mode="dark" className="hidden dark:block">
-                      <MDEditor
-                        value={editInstruction}
-                        onChange={handleInstructionChange}
-                        height={500}
-                        preview="live"
-                        previewOptions={{ remarkPlugins: [remarkGfm, remarkFrontmatter] }}
-                      />
-                    </div>
-                  </div>
-                ) : versionDoc?.skillMd ? (
-                  <div className="app-markdown prose prose-sm dark:prose-invert max-w-none">
-                    <Markdown remarkPlugins={[remarkGfm, remarkFrontmatter]}>
-                      {versionDoc.skillMd}
-                    </Markdown>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{t('skill.noDescription')}</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Right: Sidebar */}
-            <div className="space-y-4 lg:w-[320px]">
-              <CliCommandCard
-                commands={currentVersionStatus !== 'draft' ? cliCommands : []}
-                onDownload={selectedVersion ? () => handleDownload(selectedVersion) : undefined}
-                downloadFileName={selectedVersion ? `${skillName}-${selectedVersion}.zip` : undefined}
-              />
-
-              {/* Basic info card */}
-              <Card className="overflow-hidden py-0 gap-0">
-                <div className="px-4 py-3 border-b bg-muted/30">
-                  <h2 className="text-sm font-semibold flex items-center gap-2">
-                    <Wand2 className="h-4 w-4 text-muted-foreground" />
-                    {t('skill.basicInfo')}
-                  </h2>
-                </div>
-                <CardContent className="p-0">
-                  <div className="grid grid-cols-2 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(even)]:border-l border-border">
-                    <InfoCell
-                      compact
-                      label={t('skill.status')}
-                      value={<StatusBadge status={currentVersionStatus} label={currentVersionStatusLabel} />}
-                      icon={<Tag className="h-3.5 w-3.5" />}
-                    />
-                    {currentVersionSummary && (
-                      <InfoCell compact label={t('skill.author')} value={currentVersionSummary.author || '-'} icon={<Globe className="h-3.5 w-3.5" />} />
-                    )}
-                    <InfoCell compact label={t('skill.downloads')} value={String(detail.downloadCount ?? 0)} icon={<Download className="h-3.5 w-3.5" />} />
-                    {currentVersionSummary && (
-                      <InfoCell compact label={t('skill.versionDownloads')} value={String(currentVersionSummary.downloadCount ?? 0)} icon={<Download className="h-3.5 w-3.5" />} />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Pipeline status card */}
-              {currentPipelineInfo && (
-                <Card className="overflow-hidden py-0 gap-0">
-                  <div className="px-4 py-3 border-b bg-muted/30">
-                    <h2 className="text-sm font-semibold flex items-center gap-2">
-                      <GitBranch className="h-4 w-4 text-muted-foreground" />
-                      {t('skill.pipelineStatus')}
-                    </h2>
-                  </div>
-                  <CardContent className="p-3.5">
-                    <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} onRefresh={() => loadDetail()} />
-                  </CardContent>
-                </Card>
-              )}
-
+          <Card className="overflow-hidden py-0 gap-0 min-h-[580px]">
+            <div className="px-5 py-3.5 border-b bg-muted/30">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                {t('skill.skillMd')}
+              </h2>
             </div>
-          </div>
+            <CardContent className="p-5">
+              {docLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ) : isEditingDraft ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">{t('skill.skillMdHint')}</p>
+                  <div data-color-mode="light" className="dark:hidden">
+                    <MDEditor
+                      value={editInstruction}
+                      onChange={handleInstructionChange}
+                      height={500}
+                      preview="live"
+                      previewOptions={{ remarkPlugins: [remarkGfm, remarkFrontmatter] }}
+                    />
+                  </div>
+                  <div data-color-mode="dark" className="hidden dark:block">
+                    <MDEditor
+                      value={editInstruction}
+                      onChange={handleInstructionChange}
+                      height={500}
+                      preview="live"
+                      previewOptions={{ remarkPlugins: [remarkGfm, remarkFrontmatter] }}
+                    />
+                  </div>
+                </div>
+              ) : versionDoc?.skillMd ? (
+                <div className="app-markdown prose prose-sm dark:prose-invert max-w-none">
+                  <Markdown remarkPlugins={[remarkGfm, remarkFrontmatter]}>
+                    {versionDoc.skillMd}
+                  </Markdown>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">{t('skill.noDescription')}</p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Resources tab: IDE-like resource panel */}
@@ -1436,30 +1398,6 @@ function suggestNextVersionFromBase(baseVersion: string): string {
     return `v${legacy + 1}`;
   }
   return baseVersion;
-}
-
-function InfoCell({
-  label,
-  value,
-  icon,
-  compact = false,
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon?: React.ReactNode;
-  compact?: boolean;
-}) {
-  return (
-    <div className={cn('flex items-center gap-3 px-5 py-3', compact && 'gap-2.5 px-4 py-2.5')}>
-      {icon && (
-        <span className="text-muted-foreground/60 shrink-0">{icon}</span>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] text-muted-foreground leading-none mb-1">{label}</p>
-        <div className={cn('text-sm font-medium break-all', compact && 'text-[13px]')}>{value || '-'}</div>
-      </div>
-    </div>
-  );
 }
 
 function StatusBadge({

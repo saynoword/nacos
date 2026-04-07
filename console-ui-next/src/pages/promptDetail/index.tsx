@@ -393,9 +393,10 @@ export default function PromptDetailPage() {
 
   // --- Labels ---
   const handleSaveLabels = async (newLabels: Record<string, string>) => {
-    // Preserve the "latest" label as a safety measure
+    // Preserve "latest" only if it was removed (e.g. via version-centric LabelBindDialog);
+    // if the user explicitly changed its target version, respect that.
     const latestValue = labelsMap?.latest;
-    const merged = latestValue ? { ...newLabels, latest: latestValue } : newLabels;
+    const merged = (latestValue && !('latest' in newLabels)) ? { ...newLabels, latest: latestValue } : newLabels;
     const ok = await updateLabels({ promptKey, labels: JSON.stringify(merged), namespaceId });
     if (ok) {
       toast.success(t('prompt.labelsUpdateSuccess'));
@@ -703,61 +704,6 @@ export default function PromptDetailPage() {
                 )}
               </div>
 
-              {/* BizTags & Labels cards */}
-              <div className="flex gap-3 mt-3">
-                <Card className="flex-1 overflow-hidden py-0 gap-0">
-                  <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
-                    <h2 className="text-xs font-semibold flex items-center gap-1.5">
-                      <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                      {t('common.bizTags')}
-                    </h2>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setBizTagDialogOpen(true)}>
-                      <Pencil className="h-2.5 w-2.5" />
-                    </Button>
-                  </div>
-                  <CardContent className="px-3 py-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {meta.bizTags && parseBizTags(meta.bizTags).length > 0 ? (
-                        parseBizTags(meta.bizTags).map((tag) => <DetailTagChip key={tag} label={tag} />)
-                      ) : (
-                        <span className="text-xs text-muted-foreground">{t('prompt.noLabels')}</span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="flex-1 overflow-hidden py-0 gap-0">
-                  <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
-                    <h2 className="text-xs font-semibold flex items-center gap-1.5">
-                      <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                      {t('common.versionLabels.title')}
-                    </h2>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setLabelDialogOpen(true)}>
-                      <Pencil className="h-2.5 w-2.5" />
-                    </Button>
-                  </div>
-                  <CardContent className="px-3 py-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {Object.entries(labelsMap).length > 0 ? (
-                        Object.entries(labelsMap).map(([key, val]) => (
-                          <Badge
-                            key={key}
-                            variant={key === 'latest' ? 'default' : 'secondary'}
-                            className={cn(
-                              'text-[10px] px-1.5 py-0 font-mono',
-                              key === 'latest' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-0',
-                            )}
-                          >
-                            {key} → {val}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-xs text-muted-foreground">{t('common.versionLabels.noLabels')}</span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
               {/* Version lifecycle action buttons */}
               {selectedVersion && currentVersionStatus && (
                 <div className="mt-3 pt-3 border-t border-border/40">
@@ -859,6 +805,59 @@ export default function PromptDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* BizTags & Labels */}
+      <Card className="overflow-hidden py-0 gap-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" />
+                {t('common.bizTags')}
+              </span>
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setBizTagDialogOpen(true)}>
+                <Pencil className="h-2.5 w-2.5" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap min-h-[24px]">
+              {meta.bizTags && parseBizTags(meta.bizTags).length > 0 ? (
+                parseBizTags(meta.bizTags).map((tag) => <DetailTagChip key={tag} label={tag} />)
+              ) : (
+                <span className="text-xs text-muted-foreground">{t('prompt.noLabels')}</span>
+              )}
+            </div>
+          </div>
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" />
+                {t('common.versionLabels.title')}
+              </span>
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setLabelDialogOpen(true)}>
+                <Pencil className="h-2.5 w-2.5" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap min-h-[24px]">
+              {Object.entries(labelsMap).length > 0 ? (
+                Object.entries(labelsMap).map(([key, val]) => (
+                  <Badge
+                    key={key}
+                    variant={key === 'latest' ? 'default' : 'secondary'}
+                    className={cn(
+                      'text-[10px] px-1.5 py-0 font-mono',
+                      key === 'latest' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-0',
+                    )}
+                  >
+                    {key} → {val}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-xs text-muted-foreground">{t('common.versionLabels.noLabels')}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* ===== Content Grid ===== */}
       <div className={cn('grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]', loading && 'opacity-50 pointer-events-none')}>

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Tag, ArrowRight, Trash2, Pencil, Check, X, AlertCircle } from 'lucide-react';
+import { Plus, Tag, ArrowRight, Trash2, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -47,8 +46,6 @@ export function LabelManagerDialog({
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [drafts, setDrafts] = useState<LabelDraft[]>([]);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [editingVersion, setEditingVersion] = useState('');
   const [newLabelKey, setNewLabelKey] = useState('');
   const [newLabelVersion, setNewLabelVersion] = useState('');
   const [error, setError] = useState('');
@@ -67,7 +64,6 @@ export function LabelManagerDialog({
       return a.key.localeCompare(b.key);
     });
     setDrafts(entries);
-    setEditingKey(null);
     setNewLabelKey('');
     setNewLabelVersion('');
     setError('');
@@ -75,28 +71,12 @@ export function LabelManagerDialog({
 
   const existingKeys = useMemo(() => drafts.map((d) => d.key), [drafts]);
 
-  // Online versions first for better UX in selectors
   const versionOptions = useMemo(() => [...availableVersions], [availableVersions]);
 
-  const handleStartEdit = (key: string) => {
-    const draft = drafts.find((d) => d.key === key);
-    if (!draft) return;
-    setEditingKey(key);
-    setEditingVersion(draft.version);
-  };
-
-  const handleConfirmEdit = (key: string) => {
-    if (!editingVersion) return;
+  const handleVersionChange = (key: string, newVersion: string) => {
     setDrafts((prev) =>
-      prev.map((d) => (d.key === key ? { ...d, version: editingVersion } : d)),
+      prev.map((d) => (d.key === key ? { ...d, version: newVersion } : d)),
     );
-    setEditingKey(null);
-    setEditingVersion('');
-  };
-
-  const handleCancelEdit = () => {
-    setEditingKey(null);
-    setEditingVersion('');
   };
 
   const handleDelete = (key: string) => {
@@ -161,81 +141,43 @@ export function LabelManagerDialog({
             <div className="max-h-[300px] overflow-y-auto space-y-1.5">
               {drafts.map((draft) => {
                 const isLatest = draft.key === 'latest';
-                const isEditing = editingKey === draft.key;
 
                 return (
                   <div
                     key={draft.key}
-                    className="flex items-center gap-2 px-3 py-2 rounded-md border border-border/60 bg-muted/30 group"
+                    className="flex items-center gap-2 px-3 py-2 rounded-md border border-border/60 bg-muted/30"
                   >
-                    {/* Label name */}
-                    <span className="flex items-center gap-1.5 min-w-0 shrink-0">
+                    {/* Label name — fixed width for alignment */}
+                    <span className="flex items-center gap-1.5 w-[120px] shrink-0 min-w-0">
                       <span className="text-sm font-mono font-medium truncate">{draft.key}</span>
-                      {isLatest && (
-                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 text-[10px] px-1 py-0 border-0 shrink-0">
-                          {t('common.labelManager.protected')}
-                        </Badge>
-                      )}
                     </span>
 
                     <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
 
-                    {isEditing ? (
-                      <>
-                        <Select value={editingVersion} onValueChange={setEditingVersion}>
-                          <SelectTrigger className="h-7 text-xs flex-1 min-w-[100px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {versionOptions.map((v) => (
-                              <SelectItem key={v} value={v}>
-                                <span className="font-mono text-xs">{v}</span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => handleConfirmEdit(draft.key)}
-                        >
-                          <Check className="h-3 w-3 text-emerald-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
-                          onClick={handleCancelEdit}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-xs font-mono text-muted-foreground flex-1 min-w-0 truncate">
-                          {draft.version}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleStartEdit(draft.key)}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        {!isLatest && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(draft.key)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </>
-                    )}
+                    {/* Inline version selector */}
+                    <Select value={draft.version} onValueChange={(v) => handleVersionChange(draft.key, v)}>
+                      <SelectTrigger className="h-7 text-xs flex-1 min-w-[100px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {versionOptions.map((v) => (
+                          <SelectItem key={v} value={v}>
+                            <span className="font-mono text-xs">{v}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Delete button — disabled for latest */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0 text-destructive hover:text-destructive disabled:text-muted-foreground/40 disabled:hover:text-muted-foreground/40"
+                      disabled={isLatest}
+                      onClick={() => handleDelete(draft.key)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 );
               })}
