@@ -36,7 +36,6 @@ import PageTitle from 'components/PageTitle';
 import { getParams, goLogin, request, setParams } from '@/globalLib';
 import { GLOBAL_PAGE_SIZE_LIST, LOGINPAGE_ENABLED } from '../../../constants';
 import TotalRender from '../../../components/Page/TotalRender';
-import SkillOptimizeDialog from './SkillOptimizeDialog';
 import './SkillManagement.scss';
 
 @ConfigProvider.config
@@ -65,8 +64,6 @@ class SkillManagement extends React.Component {
       nownamespace_name: '',
       nownamespace_id: '',
       nownamespace_desc: '',
-      optimizeDialogVisible: false,
-      currentOptimizeSkill: null,
       orderBy: '',
     };
   }
@@ -379,37 +376,6 @@ class SkillManagement extends React.Component {
     });
   };
 
-  handleOptimizeSkill = record => {
-    // Load full skill data first
-    const namespaceId = getParams('namespace') || '';
-    const params = new URLSearchParams();
-    params.append('skillName', record.name);
-    if (namespaceId) {
-      params.append('namespaceId', namespaceId);
-    }
-
-    request({
-      url: `v3/console/ai/skills?${params.toString()}`,
-      success: data => {
-        if (data && (data.code === 0 || data.code === 200) && data.data) {
-          this.setState({
-            currentOptimizeSkill: data.data,
-            optimizeDialogVisible: true,
-          });
-        } else {
-          const { locale = {} } = this.props;
-          Message.error(
-            data?.message || locale.getSkillInfoFailed || 'Failed to get Skill information'
-          );
-        }
-      },
-      error: () => {
-        const { locale = {} } = this.props;
-        Message.error(locale.getSkillInfoFailed || 'Failed to get Skill information');
-      },
-    });
-  };
-
   getTokenInfo = () => {
     const _LOGINPAGE_ENABLED = localStorage.getItem(LOGINPAGE_ENABLED);
     let token = {};
@@ -507,19 +473,6 @@ class SkillManagement extends React.Component {
     const errorMessage =
       errorData?.message || error?.message || locale.uploadSkillFailed || 'Upload failed';
     Message.error(errorMessage);
-  };
-
-  handleOptimizeSuccess = optimizedSkill => {
-    const { locale = {} } = this.props;
-    Message.success(locale.optimizeSuccess || 'Optimization applied successfully');
-    this.getData();
-  };
-
-  handleOptimizeDialogClose = () => {
-    this.setState({
-      optimizeDialogVisible: false,
-      currentOptimizeSkill: null,
-    });
   };
 
   renderOperationColumn = (value, index, record) => {
@@ -794,15 +747,6 @@ class SkillManagement extends React.Component {
                 />
               </>
             )}
-
-            <SkillOptimizeDialog
-              visible={this.state.optimizeDialogVisible}
-              skill={this.state.currentOptimizeSkill}
-              onClose={this.handleOptimizeDialogClose}
-              onSuccess={this.handleOptimizeSuccess}
-              locale={this.props.locale}
-              history={this.props.history}
-            />
           </div>
         </div>
       </>
