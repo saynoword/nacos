@@ -250,7 +250,7 @@ class SkillDetail extends React.Component {
     const updatedSkillData = {
       name: optimizedSkill.name || skillData.name,
       description: optimizedSkill.description || skillData.description || '',
-      instruction: optimizedSkill.instruction || skillData.instruction || '',
+      skillMd: optimizedSkill.skillMd || optimizedSkill.instruction || skillData.skillMd || '',
       resource:
         optimizedSkill.resource && Object.keys(optimizedSkill.resource).length > 0
           ? optimizedSkill.resource
@@ -343,7 +343,7 @@ class SkillDetail extends React.Component {
           const updatedSkillData = {
             ...this.state.skillData,
             name: versionData.name || this.state.skillData?.name || skillName,
-            instruction: versionData.instruction || '',
+            skillMd: versionData.skillMd || '',
             description: versionData.description || '',
             resource: versionData.resource || {},
           };
@@ -830,7 +830,7 @@ class SkillDetail extends React.Component {
     const skillCard = {
       name: updatedSkillData.name || skillName,
       description: updatedSkillData.description || '',
-      instruction: updatedSkillData.instruction || '',
+      skillMd: updatedSkillData.skillMd || '',
       resource: updatedSkillData.resource || {},
     };
 
@@ -918,7 +918,7 @@ class SkillDetail extends React.Component {
     return {
       name: skillData.name || '',
       description: skillData.description || '',
-      instruction: skillData.instruction || '',
+      skillMd: skillData.skillMd || '',
       resource: skillData.resource || {},
     };
   };
@@ -932,7 +932,7 @@ class SkillDetail extends React.Component {
     return {
       name: skillData.name || '',
       description: skillData.description || '',
-      instruction: skillData.instruction || '',
+      skillMd: skillData.skillMd || '',
       resource: skillData.resource || {},
     };
   };
@@ -1031,15 +1031,16 @@ class SkillDetail extends React.Component {
       return '';
     }
 
+    // Use skillMd directly if available (from version API)
+    if (previewData.skillMd) {
+      return previewData.skillMd;
+    }
+
+    // Fallback: reconstruct from individual fields
     let markdown = '---\n';
     markdown += `name: ${this.escapeYamlValue(previewData.name || '')}\n`;
     markdown += `description: ${this.escapeYamlValue(previewData.description || '')}\n`;
-    markdown += '---\n\n';
-
-    // Instructions section - directly show instruction content without "## Instructions" header
-    if (previewData.instruction && previewData.instruction.trim() !== '') {
-      markdown += `${previewData.instruction}\n`;
-    }
+    markdown += '---\n';
 
     return markdown;
   };
@@ -1971,7 +1972,7 @@ class SkillDetail extends React.Component {
           )}
 
           {/* Pipeline status */}
-          {selectedVersionStatus === 'reviewing' && pipelineInfo && (
+          {pipelineInfo && (
             <div
               style={{
                 padding: '8px 16px',
