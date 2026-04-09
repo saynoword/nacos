@@ -1007,7 +1007,7 @@ export default function AgentSpecDetailPage() {
                             {t('agentSpec.deleteDraft')}
                           </Button>
                           {currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
-                            <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact translationPrefix="agentSpec" />
+                            <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton translationPrefix="agentSpec" />
                           )}
                         </>
                       )}
@@ -1029,7 +1029,7 @@ export default function AgentSpecDetailPage() {
                           : t('agentSpec.publish')}
                       </Button>
                       {currentPipelineInfo && currentPipelineInfo.status === 'APPROVED' && (
-                        <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact translationPrefix="agentSpec" />
+                        <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton translationPrefix="agentSpec" />
                       )}
                     </>
                   )}
