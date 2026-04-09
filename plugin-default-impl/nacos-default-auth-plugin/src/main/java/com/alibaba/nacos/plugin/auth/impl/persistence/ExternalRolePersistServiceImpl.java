@@ -21,6 +21,7 @@ import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.persistence.datasource.DataSourceService;
 import com.alibaba.nacos.persistence.datasource.DynamicDataSource;
 import com.alibaba.nacos.plugin.auth.impl.persistence.extrnal.AuthExternalPaginationHelperImpl;
+import com.alibaba.nacos.plugin.datasource.manager.DatabaseDialectManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
@@ -166,7 +167,8 @@ public class ExternalRolePersistServiceImpl implements RolePersistService {
     
     @Override
     public List<String> findRolesLikeRoleName(String role) {
-        String sql = "SELECT role FROM roles WHERE role LIKE ?";
+        String sql = "SELECT role FROM roles WHERE role LIKE ?"
+                + DatabaseDialectManager.getInstance().getDialect(dataSourceType).getLikeEscapeClause();
         List<String> users = this.jt.queryForList(sql, new String[] {String.format("%%%s%%", role)}, String.class);
         return users;
     }
@@ -200,6 +202,9 @@ public class ExternalRolePersistServiceImpl implements RolePersistService {
         if (StringUtils.isNotBlank(role)) {
             where.append(" AND role LIKE ? ");
             params.add(generateLikeArgument(role));
+        }
+        if (!params.isEmpty()) {
+            where.append(DatabaseDialectManager.getInstance().getDialect(dataSourceType).getLikeEscapeClause());
         }
         
         AuthPaginationHelper<RoleInfo> helper = createPaginationHelper();

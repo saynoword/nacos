@@ -20,11 +20,14 @@ import com.alibaba.nacos.persistence.configuration.DatasourceConfiguration;
 import com.alibaba.nacos.persistence.datasource.DataSourceService;
 import com.alibaba.nacos.persistence.datasource.DynamicDataSource;
 import com.alibaba.nacos.api.model.Page;
+import com.alibaba.nacos.plugin.datasource.dialect.DatabaseDialect;
+import com.alibaba.nacos.plugin.datasource.manager.DatabaseDialectManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -39,6 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,6 +61,8 @@ class ExternalUserPersistServiceImplTest {
     
     private DataSourceService dataSourceServiceCache;
     
+    private MockedStatic<DatabaseDialectManager> dialectManagerStatic;
+    
     private ExternalUserPersistServiceImpl externalUserPersistService;
     
     @BeforeEach
@@ -63,17 +70,25 @@ class ExternalUserPersistServiceImplTest {
         externalUserPersistService = new ExternalUserPersistServiceImpl();
         when(jdbcTemplate.queryForObject(any(), any(), eq(Integer.class))).thenReturn(0);
         when(dataSourceService.getJdbcTemplate()).thenReturn(jdbcTemplate);
+        when(dataSourceService.getDataSourceType()).thenReturn("mysql");
         embeddedStorageCache = DatasourceConfiguration.isEmbeddedStorage();
         DatasourceConfiguration.setEmbeddedStorage(false);
         Field datasourceField = DynamicDataSource.class.getDeclaredField("basicDataSourceService");
         datasourceField.setAccessible(true);
         dataSourceServiceCache = (DataSourceService) datasourceField.get(DynamicDataSource.getInstance());
         datasourceField.set(DynamicDataSource.getInstance(), dataSourceService);
+        DatabaseDialectManager dialectManager = mock(DatabaseDialectManager.class);
+        DatabaseDialect mysqlDialect = mock(DatabaseDialect.class);
+        when(mysqlDialect.getLikeEscapeClause()).thenReturn("");
+        when(dialectManager.getDialect("mysql")).thenReturn(mysqlDialect);
+        dialectManagerStatic = mockStatic(DatabaseDialectManager.class);
+        dialectManagerStatic.when(DatabaseDialectManager::getInstance).thenReturn(dialectManager);
         externalUserPersistService.init();
     }
     
     @AfterEach
     void tearDown() throws NoSuchFieldException, IllegalAccessException {
+        dialectManagerStatic.close();
         DatasourceConfiguration.setEmbeddedStorage(embeddedStorageCache);
         Field datasourceField = DynamicDataSource.class.getDeclaredField("basicDataSourceService");
         datasourceField.setAccessible(true);

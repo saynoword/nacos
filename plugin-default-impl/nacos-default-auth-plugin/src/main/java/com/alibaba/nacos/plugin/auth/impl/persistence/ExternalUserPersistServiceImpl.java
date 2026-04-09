@@ -21,6 +21,7 @@ import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.persistence.datasource.DataSourceService;
 import com.alibaba.nacos.persistence.datasource.DynamicDataSource;
 import com.alibaba.nacos.plugin.auth.impl.persistence.extrnal.AuthExternalPaginationHelperImpl;
+import com.alibaba.nacos.plugin.datasource.manager.DatabaseDialectManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -160,7 +161,8 @@ public class ExternalUserPersistServiceImpl implements UserPersistService {
     
     @Override
     public List<String> findUserLikeUsername(String username) {
-        String sql = "SELECT username FROM users WHERE username LIKE ?";
+        String sql = "SELECT username FROM users WHERE username LIKE ?"
+                + DatabaseDialectManager.getInstance().getDialect(dataSourceType).getLikeEscapeClause();
         List<String> users = this.jt.queryForList(sql, new String[] {String.format("%%%s%%", username)}, String.class);
         return users;
     }
@@ -174,6 +176,7 @@ public class ExternalUserPersistServiceImpl implements UserPersistService {
         List<String> params = new ArrayList<>();
         if (StringUtils.isNotBlank(username)) {
             where.append(" AND username LIKE ? ");
+            where.append(DatabaseDialectManager.getInstance().getDialect(dataSourceType).getLikeEscapeClause());
             params.add(generateLikeArgument(username));
         }
         

@@ -21,6 +21,7 @@ import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.persistence.datasource.DataSourceService;
 import com.alibaba.nacos.persistence.datasource.DynamicDataSource;
 import com.alibaba.nacos.plugin.auth.impl.persistence.extrnal.AuthExternalPaginationHelperImpl;
+import com.alibaba.nacos.plugin.datasource.manager.DatabaseDialectManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
@@ -138,6 +139,7 @@ public class ExternalPermissionPersistServiceImpl implements PermissionPersistSe
         List<String> params = new ArrayList<>();
         if (StringUtils.isNotBlank(role)) {
             where.append(" AND role LIKE ?");
+            where.append(DatabaseDialectManager.getInstance().getDialect(dataSourceType).getLikeEscapeClause());
             params.add(generateLikeArgument(role));
         }
         
