@@ -388,7 +388,7 @@ export function PipelineStatusDisplay({
         {nodes.length > 0 && (
           <button
             type="button"
-            className="group w-full flex items-center gap-3 rounded-lg border bg-muted/10 px-3 py-2.5 transition-colors hover:bg-muted/30 cursor-pointer"
+            className="group w-full flex items-center gap-3 rounded-lg border bg-muted/10 px-4 py-3.5 transition-colors hover:bg-muted/30 cursor-pointer"
             onClick={() => setDialogOpen(true)}
           >
             {/* Node list with names */}
