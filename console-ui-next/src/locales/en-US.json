@@ -1169,6 +1169,7 @@
     "versionInvalid": "Invalid version format, should be x.y.z or vN",
     "versionMustGreater": "New version must be greater than current version {{current}}",
     "draftExistsTip": "A draft or unpublished version already exists",
+    "draftNoInstallHint": "Draft versions cannot download the ZIP or use CLI install until published. Complete review and publish first.",
     "bizTagsUpdateSuccess": "Tags updated",
     "bizTagPlaceholder": "Add a tag",
     "noBizTags": "No tags",
