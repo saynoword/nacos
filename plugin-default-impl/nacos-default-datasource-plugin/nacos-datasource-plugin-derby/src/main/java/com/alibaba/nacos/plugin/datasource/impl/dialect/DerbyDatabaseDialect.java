@@ -35,4 +35,29 @@ public class DerbyDatabaseDialect extends AbstractDatabaseDialect {
     public String getFunction(String functionName) {
         return TrustedDerbyFunctionEnum.getFunctionByName(functionName);
     }
+
+    @Override
+    public String getLimitTopSqlWithMark(String sql) {
+        return sql + " OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY ";
+    }
+
+    @Override
+    public String getLimitPageSqlWithMark(String sql) {
+        return sql + " OFFSET ? ROWS FETCH NEXT ? ROWS ONLY ";
+    }
+
+    @Override
+    public String getLimitPageSql(String sql, int pageNo, int pageSize) {
+        return sql + " OFFSET " + getPagePrevNum(pageNo, pageSize) + " ROWS FETCH NEXT " + pageSize + " ROWS ONLY";
+    }
+
+    @Override
+    public String getLimitPageSqlWithOffset(String sql, int startOffset, int pageSize) {
+        return sql + " OFFSET " + startOffset + " ROWS FETCH NEXT " + pageSize + " ROWS ONLY";
+    }
+
+    @Override
+    public String getLikeEscapeClause() {
+        return " ESCAPE '\\' ";
+    }
 }

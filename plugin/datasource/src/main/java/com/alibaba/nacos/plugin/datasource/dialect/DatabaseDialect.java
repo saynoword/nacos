@@ -90,4 +90,18 @@ public interface DatabaseDialect {
      * @return function
      */
     String getFunction(String functionName);
+
+    /**
+     * Get the SQL clause to append after a LIKE predicate for proper escape character handling.
+     *
+     * <p>Different databases have different default LIKE escape behaviors. For example, MySQL uses {@code \} as the
+     * default escape character, while Derby, PostgreSQL, and Oracle require an explicit {@code ESCAPE} clause.
+     *
+     * <p>The returned string MUST include leading/trailing spaces if non-empty, to allow safe concatenation.
+     *
+     * @return the LIKE escape clause, e.g. {@code " ESCAPE '\\' "}, or empty string if not needed
+     */
+    default String getLikeEscapeClause() {
+        return "";
+    }
 }

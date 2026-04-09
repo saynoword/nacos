@@ -50,4 +50,9 @@ public class PostgresqlDatabaseDialect extends AbstractDatabaseDialect {
     public String getLimitPageSqlWithOffset(String sql, int startOffset, int pageSize) {
         return sql + "  OFFSET " + startOffset + " LIMIT " + pageSize;
     }
+
+    @Override
+    public String getLikeEscapeClause() {
+        return " ESCAPE '\\' ";
+    }
 }
