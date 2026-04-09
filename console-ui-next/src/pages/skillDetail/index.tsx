@@ -765,14 +765,14 @@ export default function SkillDetailPage() {
       {/* ===== Bottom: Two columns — Left: version info, Right: tags + CLI ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch">
         {/* Left column: version selector + actions (wider) */}
-        <div className="lg:col-span-3 space-y-3">
+        <div className="lg:col-span-3 flex flex-col">
           {showVersionSide ? (
             selectedVersion ? (
-            <Card className="overflow-hidden py-0 gap-0">
+            <Card className="overflow-hidden py-0 gap-0 flex-1">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Select value={selectedVersion} onValueChange={handleSelectVersion} disabled={isEditingDraft}>
-                    <SelectTrigger className="h-7 text-xs bg-background/80 w-[7rem] gap-1.5 font-mono">
+                    <SelectTrigger className="h-7 text-xs bg-background/80 w-36 gap-1.5 font-mono">
                       <SelectValue placeholder={t('skill.selectVersion')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -960,7 +960,7 @@ export default function SkillDetailPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs gap-1.5"
+                    className="h-7 text-xs gap-1.5 w-36"
                     disabled={actionLoading}
                     onClick={() => handleOffline(selectedVersion)}
                   >
@@ -972,7 +972,7 @@ export default function SkillDetailPage() {
                 {currentVersionStatus === 'offline' && (
                   <Button
                     size="sm"
-                    className="h-7 text-xs gap-1.5"
+                    className="h-7 text-xs gap-1.5 w-36"
                     disabled={actionLoading}
                     onClick={() => handleOnline(selectedVersion)}
                   >
@@ -1016,17 +1016,17 @@ export default function SkillDetailPage() {
                 {currentPipelineInfo && (
                   <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} onRefresh={() => loadDetail()} />
                 )}
-              </CardContent>
 
-              {/* CLI install (inside Card but outside CardContent for aligned padding) */}
-              {currentVersionStatus !== 'draft' && (
-                <CliCommandCard
-                  commands={cliCommands}
-                  onDownload={() => handleDownload(selectedVersion)}
-                  downloadFileName={`${skillName}-${selectedVersion}.zip`}
-                  className="shadow-none border-0 border-t border-border/40 rounded-none"
-                />
-              )}
+                {/* CLI install (flat mode, inside CardContent) */}
+                {currentVersionStatus !== 'draft' && (
+                  <CliCommandCard
+                    commands={cliCommands}
+                    onDownload={() => handleDownload(selectedVersion)}
+                    downloadFileName={`${skillName}-${selectedVersion}.zip`}
+                    flat
+                  />
+                )}
+              </CardContent>
             </Card>
             ) : (
               <Card className="overflow-hidden py-0 gap-0">
@@ -1097,7 +1097,7 @@ export default function SkillDetailPage() {
         </div>
 
         {/* Right column: bizTags + version labels (separate cards) */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 flex flex-col gap-4">
           {/* BizTags */}
           <Card className="overflow-hidden py-0 gap-0">
             <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
@@ -1121,7 +1121,7 @@ export default function SkillDetailPage() {
           </Card>
 
           {/* Version Labels */}
-          <Card className="overflow-hidden py-0 gap-0">
+          <Card className="overflow-hidden py-0 gap-0 flex-1">
             <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
               <span className="text-xs font-semibold flex items-center gap-2">
                 <Tag className="h-3.5 w-3.5 text-muted-foreground" />

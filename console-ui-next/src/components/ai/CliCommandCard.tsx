@@ -21,12 +21,71 @@ interface CliCommandCardProps {
   downloadFileName?: string;
   /** Whether download is available (e.g. non-draft version selected) */
   downloadDisabled?: boolean;
+  /** Flat mode: no Card wrapper or header, just the content with an optional top border. Used when embedded inside another card. */
+  flat?: boolean;
 }
 
-export function CliCommandCard({ commands, className, onDownload, downloadFileName, downloadDisabled }: CliCommandCardProps) {
+export function CliCommandCard({ commands, className, onDownload, downloadFileName, downloadDisabled, flat }: CliCommandCardProps) {
   const { t } = useTranslation();
 
   if (commands.length === 0 && !onDownload) return null;
+
+  const content = (
+    <div className={cn(
+      'grid gap-3',
+      onDownload && commands.length > 0 ? 'grid-cols-1 sm:grid-cols-2 items-end' : 'grid-cols-1',
+    )}>
+      {/* Download ZIP section */}
+      {onDownload && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-foreground">{t('common.cliUsage.manualDownload')}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs gap-1.5"
+            disabled={downloadDisabled}
+            onClick={onDownload}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {downloadFileName || t('common.cliUsage.downloadZip')}
+          </Button>
+        </div>
+      )}
+
+      {/* CLI section */}
+      {commands.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+            {t('common.cliUsage.cliInstall')}
+            <a
+              href="https://github.com/nacos-group/nacos-cli"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t('common.cliUsage.cliDoc')}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </p>
+          {commands.map((cmd, idx) => (
+            <CommandBlock key={idx} command={cmd.command} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  if (flat) {
+    return (
+      <div className={cn('pt-3 border-t border-border/40', className)}>
+        <p className="text-xs font-semibold flex items-center gap-2 mb-3">
+          <Download className="h-3.5 w-3.5 text-muted-foreground" />
+          {t('common.cliUsage.title')}
+        </p>
+        {content}
+      </div>
+    );
+  }
 
   return (
     <Card className={cn('overflow-hidden py-0 gap-0', className)}>
@@ -37,48 +96,7 @@ export function CliCommandCard({ commands, className, onDownload, downloadFileNa
         </h2>
       </div>
       <CardContent className="p-3.5">
-        <div className={cn(
-          'grid gap-3',
-          onDownload && commands.length > 0 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1',
-        )}>
-          {/* Download ZIP section */}
-          {onDownload && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-foreground">{t('common.cliUsage.manualDownload')}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-8 text-xs gap-1.5"
-                disabled={downloadDisabled}
-                onClick={onDownload}
-              >
-                <Download className="h-3.5 w-3.5" />
-                {downloadFileName || t('common.cliUsage.downloadZip')}
-              </Button>
-            </div>
-          )}
-
-          {/* CLI section */}
-          {commands.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
-                {t('common.cliUsage.cliInstall')}
-                <a
-                  href="https://github.com/nacos-group/nacos-cli"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {t('common.cliUsage.cliDoc')}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </p>
-              {commands.map((cmd, idx) => (
-                <CommandBlock key={idx} command={cmd.command} />
-              ))}
-            </div>
-          )}
-        </div>
+        {content}
       </CardContent>
     </Card>
   );
@@ -111,7 +129,7 @@ function CommandBlock({ command }: { command: string }) {
   return (
     <div>
       <div className="group relative rounded-md bg-zinc-950 dark:bg-zinc-900 border border-zinc-800 overflow-hidden">
-        <pre className="px-3 py-2.5 pr-10 text-[11px] leading-relaxed text-zinc-300 font-mono overflow-x-auto whitespace-pre-wrap break-all">
+        <pre className="px-3 py-1.5 pr-10 text-[11px] leading-relaxed text-zinc-300 font-mono overflow-x-auto whitespace-pre-wrap break-all">
           <span className="text-emerald-400 select-none">$ </span>
           {command}
         </pre>
