@@ -20,10 +20,14 @@ import com.alibaba.nacos.api.model.Page;
 import com.alibaba.nacos.persistence.repository.embedded.EmbeddedStorageContextHolder;
 import com.alibaba.nacos.persistence.repository.embedded.operate.DatabaseOperate;
 import com.alibaba.nacos.persistence.repository.embedded.sql.ModifyRequest;
+import com.alibaba.nacos.plugin.datasource.dialect.DatabaseDialect;
+import com.alibaba.nacos.plugin.datasource.manager.DatabaseDialectManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -34,6 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,12 +50,25 @@ class EmbeddedRolePersistServiceImplTest {
     @Mock
     private DatabaseOperate databaseOperate;
     
+    private MockedStatic<DatabaseDialectManager> dialectManagerStatic;
+    
     private EmbeddedRolePersistServiceImpl embeddedRolePersistService;
     
     @BeforeEach
     void setUp() throws Exception {
         when(databaseOperate.queryOne(any(String.class), any(Object[].class), eq(Integer.class))).thenReturn(0);
+        DatabaseDialectManager dialectManager = mock(DatabaseDialectManager.class);
+        DatabaseDialect derbyDialect = mock(DatabaseDialect.class);
+        when(derbyDialect.getLikeEscapeClause()).thenReturn(" ESCAPE '\\' ");
+        when(dialectManager.getDialect("derby")).thenReturn(derbyDialect);
+        dialectManagerStatic = mockStatic(DatabaseDialectManager.class);
+        dialectManagerStatic.when(DatabaseDialectManager::getInstance).thenReturn(dialectManager);
         embeddedRolePersistService = new EmbeddedRolePersistServiceImpl(databaseOperate);
+    }
+    
+    @AfterEach
+    void tearDown() {
+        dialectManagerStatic.close();
     }
     
     @Test

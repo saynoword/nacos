@@ -16,16 +16,17 @@
 
 package com.alibaba.nacos.plugin.auth.impl.persistence.embedded;
 
-import com.alibaba.nacos.plugin.auth.impl.persistence.handler.PageHandlerAdapterFactory;
-import com.alibaba.nacos.plugin.auth.impl.model.OffsetFetchResult;
 import com.alibaba.nacos.api.model.Page;
 import com.alibaba.nacos.persistence.repository.embedded.EmbeddedStorageContextHolder;
 import com.alibaba.nacos.persistence.repository.embedded.operate.DatabaseOperate;
 import com.alibaba.nacos.plugin.auth.impl.persistence.AuthPaginationHelper;
-import com.alibaba.nacos.plugin.auth.impl.persistence.handler.support.DerbyPageHandlerAdapter;
+import com.alibaba.nacos.plugin.datasource.dialect.DatabaseDialect;
+import com.alibaba.nacos.plugin.datasource.manager.DatabaseDialectManager;
 import com.alibaba.nacos.plugin.datasource.model.MapperResult;
 import org.springframework.jdbc.core.RowMapper;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -38,8 +39,11 @@ public class AuthEmbeddedPaginationHelperImpl<E> implements AuthPaginationHelper
     
     private final DatabaseOperate databaseOperate;
     
-    public AuthEmbeddedPaginationHelperImpl(DatabaseOperate databaseOperate) {
+    private final String dataSourceType;
+    
+    public AuthEmbeddedPaginationHelperImpl(DatabaseOperate databaseOperate, String dataSourceType) {
         this.databaseOperate = databaseOperate;
+        this.dataSourceType = dataSourceType;
     }
     
     /**
@@ -89,12 +93,10 @@ public class AuthEmbeddedPaginationHelperImpl<E> implements AuthPaginationHelper
         }
         
         // fill the sql Page args
-        String fetchSql = sqlFetchRows;
-        OffsetFetchResult offsetFetchResult = addOffsetAndFetchNext(fetchSql, args, pageNo, pageSize);
-        fetchSql = offsetFetchResult.getFetchSql();
-        args = offsetFetchResult.getNewArgs();
+        MapperResult paginationResult = addOffsetAndFetchNext(sqlFetchRows, args, pageNo, pageSize);
         
-        List<E> result = databaseOperate.queryMany(fetchSql, args, rowMapper);
+        List<E> result = databaseOperate.queryMany(paginationResult.getSql(),
+                paginationResult.getParamList().toArray(), rowMapper);
         for (E item : result) {
             page.getPageItems().add(item);
         }
@@ -130,12 +132,10 @@ public class AuthEmbeddedPaginationHelperImpl<E> implements AuthPaginationHelper
         }
         
         // fill the sql Page args
-        String fetchSql = sqlFetchRows;
-        OffsetFetchResult offsetFetchResult = addOffsetAndFetchNext(fetchSql, args, pageNo, pageSize);
-        fetchSql = offsetFetchResult.getFetchSql();
-        args = offsetFetchResult.getNewArgs();
+        MapperResult paginationResult = addOffsetAndFetchNext(sqlFetchRows, args, pageNo, pageSize);
         
-        List<E> result = databaseOperate.queryMany(fetchSql, args, rowMapper);
+        List<E> result = databaseOperate.queryMany(paginationResult.getSql(),
+                paginationResult.getParamList().toArray(), rowMapper);
         for (E item : result) {
             page.getPageItems().add(item);
         }
@@ -171,12 +171,10 @@ public class AuthEmbeddedPaginationHelperImpl<E> implements AuthPaginationHelper
         }
         
         // fill the sql Page args
-        String fetchSql = sqlFetchRows;
-        OffsetFetchResult offsetFetchResult = addOffsetAndFetchNext(fetchSql, args2, pageNo, pageSize);
-        fetchSql = offsetFetchResult.getFetchSql();
-        args2 = offsetFetchResult.getNewArgs();
+        MapperResult paginationResult = addOffsetAndFetchNext(sqlFetchRows, args2, pageNo, pageSize);
         
-        List<E> result = databaseOperate.queryMany(fetchSql, args2, rowMapper);
+        List<E> result = databaseOperate.queryMany(paginationResult.getSql(),
+                paginationResult.getParamList().toArray(), rowMapper);
         for (E item : result) {
             page.getPageItems().add(item);
         }
@@ -193,12 +191,10 @@ public class AuthEmbeddedPaginationHelperImpl<E> implements AuthPaginationHelper
         final Page<E> page = new Page<>();
         
         // fill the sql Page args
-        String fetchSql = sqlFetchRows;
-        OffsetFetchResult offsetFetchResult = addOffsetAndFetchNext(fetchSql, args, pageNo, pageSize);
-        fetchSql = offsetFetchResult.getFetchSql();
-        args = offsetFetchResult.getNewArgs();
+        MapperResult paginationResult = addOffsetAndFetchNext(sqlFetchRows, args, pageNo, pageSize);
         
-        List<E> result = databaseOperate.queryMany(fetchSql, args, rowMapper);
+        List<E> result = databaseOperate.queryMany(paginationResult.getSql(),
+                paginationResult.getParamList().toArray(), rowMapper);
         for (E item : result) {
             page.getPageItems().add(item);
         }
@@ -222,9 +218,13 @@ public class AuthEmbeddedPaginationHelperImpl<E> implements AuthPaginationHelper
         }
     }
     
-    private OffsetFetchResult addOffsetAndFetchNext(String fetchSql, Object[] arg, int pageNo, int pageSize) {
-        return PageHandlerAdapterFactory.getInstance().getHandlerAdapterMap()
-                .get(DerbyPageHandlerAdapter.class.getName()).addOffsetAndFetchNext(fetchSql, arg, pageNo, pageSize);
+    private MapperResult addOffsetAndFetchNext(String fetchSql, Object[] arg, int pageNo, int pageSize) {
+        DatabaseDialect dialect = DatabaseDialectManager.getInstance().getDialect(dataSourceType);
+        String paginatedSql = dialect.getLimitPageSqlWithMark(fetchSql);
+        List<Object> newArgsList = new ArrayList<>(Arrays.asList(arg));
+        newArgsList.add(dialect.getPagePrevNum(pageNo, pageSize));
+        newArgsList.add(dialect.getPageLastNum(pageNo, pageSize));
+        return new MapperResult(paginatedSql, newArgsList);
     }
     
 }

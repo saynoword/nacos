@@ -22,6 +22,8 @@ import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.persistence.repository.embedded.EmbeddedStorageContextHolder;
 import com.alibaba.nacos.persistence.repository.embedded.operate.DatabaseOperate;
 import com.alibaba.nacos.plugin.auth.impl.persistence.embedded.AuthEmbeddedPaginationHelperImpl;
+import com.alibaba.nacos.plugin.datasource.constants.DatabaseTypeConstant;
+import com.alibaba.nacos.plugin.datasource.manager.DatabaseDialectManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,8 +40,6 @@ public class EmbeddedRolePersistServiceImpl implements RolePersistService {
     private final DatabaseOperate databaseOperate;
     
     private static final String PATTERN_STR = "*";
-    
-    private static final String SQL_DERBY_ESCAPE_BACK_SLASH_FOR_LIKE = " ESCAPE '\\' ";
     
     public EmbeddedRolePersistServiceImpl(DatabaseOperate databaseOperate) {
         this.databaseOperate = databaseOperate;
@@ -146,7 +146,8 @@ public class EmbeddedRolePersistServiceImpl implements RolePersistService {
     
     @Override
     public List<String> findRolesLikeRoleName(String role) {
-        String sql = "SELECT role FROM roles WHERE role LIKE ? " + SQL_DERBY_ESCAPE_BACK_SLASH_FOR_LIKE;
+        String sql = "SELECT role FROM roles WHERE role LIKE ? "
+                + DatabaseDialectManager.getInstance().getDialect(DatabaseTypeConstant.DERBY).getLikeEscapeClause();
         return databaseOperate.queryMany(sql, new String[] {"%" + role + "%"}, String.class);
     }
     
@@ -179,7 +180,8 @@ public class EmbeddedRolePersistServiceImpl implements RolePersistService {
             params.add(generateLikeArgument(role));
         }
         if (CollectionUtils.isNotEmpty(params)) {
-            where.append(SQL_DERBY_ESCAPE_BACK_SLASH_FOR_LIKE);
+            where.append(DatabaseDialectManager.getInstance().getDialect(DatabaseTypeConstant.DERBY)
+                    .getLikeEscapeClause());
         }
         String sqlCountRows = "SELECT count(*) FROM roles";
         String sqlFetchRows = "SELECT role, username FROM roles";
@@ -191,6 +193,6 @@ public class EmbeddedRolePersistServiceImpl implements RolePersistService {
     
     @Override
     public <E> AuthPaginationHelper<E> createPaginationHelper() {
-        return new AuthEmbeddedPaginationHelperImpl<>(databaseOperate);
+        return new AuthEmbeddedPaginationHelperImpl<>(databaseOperate, DatabaseTypeConstant.DERBY);
     }
 }

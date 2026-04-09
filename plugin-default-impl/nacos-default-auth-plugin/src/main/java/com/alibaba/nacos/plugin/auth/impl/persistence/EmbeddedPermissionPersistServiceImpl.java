@@ -21,6 +21,8 @@ import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.persistence.repository.embedded.EmbeddedStorageContextHolder;
 import com.alibaba.nacos.persistence.repository.embedded.operate.DatabaseOperate;
 import com.alibaba.nacos.plugin.auth.impl.persistence.embedded.AuthEmbeddedPaginationHelperImpl;
+import com.alibaba.nacos.plugin.datasource.constants.DatabaseTypeConstant;
+import com.alibaba.nacos.plugin.datasource.manager.DatabaseDialectManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,8 +40,6 @@ public class EmbeddedPermissionPersistServiceImpl implements PermissionPersistSe
     private final DatabaseOperate databaseOperate;
     
     private static final String PATTERN_STR = "*";
-    
-    private static final String SQL_DERBY_ESCAPE_BACK_SLASH_FOR_LIKE = " ESCAPE '\\' ";
     
     public EmbeddedPermissionPersistServiceImpl(DatabaseOperate databaseOperate) {
         this.databaseOperate = databaseOperate;
@@ -112,7 +112,8 @@ public class EmbeddedPermissionPersistServiceImpl implements PermissionPersistSe
         List<String> params = new ArrayList<>();
         if (StringUtils.isNotBlank(role)) {
             where.append(" AND role LIKE ?");
-            where.append(SQL_DERBY_ESCAPE_BACK_SLASH_FOR_LIKE);
+            where.append(DatabaseDialectManager.getInstance().getDialect(DatabaseTypeConstant.DERBY)
+                    .getLikeEscapeClause());
             params.add(generateLikeArgument(role));
         }
         
@@ -144,6 +145,6 @@ public class EmbeddedPermissionPersistServiceImpl implements PermissionPersistSe
     
     @Override
     public <E> AuthPaginationHelper<E> createPaginationHelper() {
-        return new AuthEmbeddedPaginationHelperImpl<>(databaseOperate);
+        return new AuthEmbeddedPaginationHelperImpl<>(databaseOperate, DatabaseTypeConstant.DERBY);
     }
 }
