@@ -661,118 +661,182 @@ export default function SkillDetailPage() {
   const showVersionSide = versions.length > 0;
 
   return (
-    <div className="space-y-5 pb-5">
-      {/* ===== Metadata + version: one row (lg), fixed height, scroll inside each column ===== */}
+    <div className="space-y-4 pb-5">
+      {/* ===== Top: Skill identity header (compact) ===== */}
       <div className="relative w-full overflow-hidden rounded-xl border bg-card shadow-sm">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.04] via-transparent to-fuchsia-500/[0.03]" />
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-violet-500/[0.06] to-transparent rounded-full -translate-y-1/2 translate-x-1/3" />
 
-        <div className="relative px-5 py-4">
+        <div className="relative px-5 py-3">
           <Button
             variant="ghost"
             size="sm"
-            className="mb-3 h-7 gap-1.5 text-muted-foreground hover:text-foreground -ml-2"
+            className="mb-2 h-7 gap-1.5 text-muted-foreground hover:text-foreground -ml-2"
             onClick={() => navigate('/skill')}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             {t('skill.backToList')}
           </Button>
 
-          <div
-            className={cn(
-              'grid gap-6',
-              'lg:grid-cols-2 lg:items-stretch lg:gap-0 lg:min-h-[24rem] lg:h-[28rem]',
-            )}
-          >
-            {/* Left: metadata */}
-            <div className="flex min-h-0 flex-col border-b border-border/50 pb-5 lg:h-full lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6">
-              <div className="flex min-h-0 flex-1 items-start gap-4 overflow-y-auto">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-400 shadow-lg shadow-violet-500/20">
-                  <Wand2 className="h-7 w-7 text-white" />
-                </div>
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-400 shadow-lg shadow-violet-500/20">
+              <Wand2 className="h-6 w-6 text-white" />
+            </div>
 
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-xl font-bold tracking-tight mb-1">{detail.name}</h1>
-              {/* Enable & Scope toggle switches */}
-              <div className="flex items-center gap-4 mt-1.5 mb-1">
-                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                  <Switch
-                    checked={detail.enable}
-                    disabled={enableToggling}
-                    onCheckedChange={handleToggleEnable}
-                    className={cn(
-                      detail.enable
-                        ? 'data-[state=checked]:bg-emerald-500'
-                        : '',
-                    )}
-                  />
-                  <span className={cn(
-                    'text-xs font-medium',
-                    detail.enable ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground',
-                  )}>
-                    {detail.enable ? t('skill.enabled') : t('skill.disabled')}
-                  </span>
-                </label>
-                <div className="h-4 w-px bg-border" />
-                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                  <Switch
-                    checked={detail.scope === 'PUBLIC'}
-                    disabled={scopeToggling}
-                    onCheckedChange={handleToggleScope}
-                  />
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                    {detail.scope === 'PUBLIC' ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                    {detail.scope === 'PUBLIC' ? t('skill.scopePublic') : t('skill.scopePrivate')}
-                  </span>
-                </label>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-xl font-bold tracking-tight">{detail.name}</h1>
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                    <Switch
+                      checked={detail.enable}
+                      disabled={enableToggling}
+                      onCheckedChange={handleToggleEnable}
+                      className={cn(
+                        'scale-90',
+                        detail.enable ? 'data-[state=checked]:bg-emerald-500' : '',
+                      )}
+                    />
+                    <span className={cn(
+                      'text-xs font-medium',
+                      detail.enable ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground',
+                    )}>
+                      {detail.enable ? t('skill.enabled') : t('skill.disabled')}
+                    </span>
+                  </label>
+                  <div className="h-4 w-px bg-border" />
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                    <Switch
+                      checked={detail.scope === 'PUBLIC'}
+                      disabled={scopeToggling}
+                      onCheckedChange={handleToggleScope}
+                      className="scale-90"
+                    />
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                      {detail.scope === 'PUBLIC' ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                      {detail.scope === 'PUBLIC' ? t('skill.scopePublic') : t('skill.scopePrivate')}
+                    </span>
+                  </label>
+                </div>
               </div>
-              {/* Description - editable in draft mode */}
+
+              {/* Description */}
               {isEditingDraft ? (
                 <Textarea
                   value={editDescription}
                   onChange={(e) => handleDescriptionChange(e.target.value)}
                   placeholder={t('skill.descPlaceholder')}
-                  className="text-sm w-full min-h-8 resize-none"
+                  className="text-sm w-full min-h-8 resize-none mt-1"
                 />
               ) : versionDoc?.description ? (
-                <p className="text-sm text-muted-foreground leading-relaxed w-full">
-                  {versionDoc.description}
-                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed mt-1">{versionDoc.description}</p>
               ) : null}
 
-              {/* Skill-level meta */}
-              <div className="mt-3 pt-2 border-t border-border/40">
-                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                  {currentVersionSummary?.author && (
-                    <span className="inline-flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      {currentVersionSummary.author}
-                    </span>
-                  )}
-                  {detail.updateTime > 0 && (
-                    <span className="inline-flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {dayjs(detail.updateTime).format('YYYY-MM-DD HH:mm')}
-                    </span>
-                  )}
-                  {detail.from && (
-                    <span className="inline-flex items-center gap-1">
-                      <Tag className="h-3 w-3" />
-                      {t('common.from')}: {detail.from}
-                    </span>
-                  )}
+              {/* Meta info row */}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap mt-2">
+                {currentVersionSummary?.author && (
                   <span className="inline-flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {currentVersionSummary.author}
+                  </span>
+                )}
+                {detail.updateTime > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {dayjs(detail.updateTime).format('YYYY-MM-DD HH:mm')}
+                  </span>
+                )}
+                {detail.from && (
+                  <span className="inline-flex items-center gap-1">
+                    <Tag className="h-3 w-3" />
+                    {t('common.from')}: {detail.from}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1">
+                  <Download className="h-3 w-3" />
+                  {t('skill.downloads')}: {detail.downloadCount ?? 0}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Bottom: Two columns — Left: version info, Right: tags + CLI ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch">
+        {/* Left column: version selector + actions (wider) */}
+        <div className="lg:col-span-3 space-y-3">
+          {showVersionSide ? (
+            selectedVersion ? (
+            <Card className="overflow-hidden py-0 gap-0">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Select value={selectedVersion} onValueChange={handleSelectVersion} disabled={isEditingDraft}>
+                    <SelectTrigger className="h-7 text-xs bg-background/80 w-[7rem] gap-1.5 font-mono">
+                      <SelectValue placeholder={t('skill.selectVersion')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {versionOptions.map((version) => {
+                        const vPipeline = parsePipelineInfo(version.publishPipelineInfo);
+                        const isVersionPendingPublish = version.status === 'reviewing' && vPipeline?.status === 'APPROVED';
+                        return (
+                        <SelectItem key={version.version} value={version.version}>
+                          <span className="flex items-center gap-2">
+                            <span>{version.version}</span>
+                            {latestVersion === version.version && (
+                              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 text-[10px] px-1 py-0 border-0">
+                                {t('skill.latestVersion')}
+                              </Badge>
+                            )}
+                            {version.status === 'draft' && (
+                              <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] px-1 py-0 border-0">
+                                {t('skill.versionStatus.draft')}
+                              </Badge>
+                            )}
+                            {version.status === 'reviewing' && (
+                              <Badge className={isVersionPendingPublish
+                                ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 text-[10px] px-1 py-0 border-0'
+                                : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 text-[10px] px-1 py-0 border-0'
+                              }>
+                                {t(isVersionPendingPublish ? 'skill.versionStatus.pendingPublish' : 'skill.versionStatus.reviewing')}
+                              </Badge>
+                            )}
+                          </span>
+                        </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs shrink-0 gap-1 text-muted-foreground"
+                    onClick={() => setVersionSheetOpen(true)}
+                    disabled={isEditingDraft}
+                  >
+                    <History className="h-3 w-3" />
+                    {t('skill.versionHistory')}
+                  </Button>
+                  {currentVersionStatus && (
+                    <StatusBadge status={currentVersionStatus} label={currentVersionStatusLabel} />
+                  )}
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                     <Download className="h-3 w-3" />
-                    {t('skill.downloads')}: {detail.downloadCount ?? 0}
+                    {t('skill.versionDownloads')}: {currentVersionSummary?.downloadCount ?? 0}
                   </span>
                 </div>
-              </div>
 
-              {/* Empty state: no versions, show create draft button or editing actions */}
-              {!selectedVersion && !detail.editingVersion && !detail.reviewingVersion && versions.length === 0 && (
-                <div className="mt-3 pt-3 border-t border-border/40">
-                  <div className="flex items-center gap-2">
-                    {isCreatingNewDraft ? (
+                {currentVersionStatus && !detail.enable && (
+                  <p className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                    {t('skill.skillDisabledWarning')}
+                  </p>
+                )}
+                {currentVersionStatus && (
+                <div className="flex items-center gap-2 flex-wrap">
+                {currentVersionStatus === 'draft' && (
+                  <>
+                    {isEditingDraft ? (
                       <>
                         <Button
                           variant="outline"
@@ -787,208 +851,61 @@ export default function SkillDetailPage() {
                         <Button
                           size="sm"
                           className="h-7 text-xs gap-1.5"
-                          disabled={draftSaving}
                           onClick={handleSaveDraft}
+                          disabled={draftSaving}
                         >
-                          {draftSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                          {t('skill.createDraft')}
+                          <Save className="h-3 w-3" />
+                          {draftSaving ? t('common.loading') : t('skill.saveDraft')}
                         </Button>
                       </>
                     ) : (
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs gap-1.5"
-                        disabled={actionLoading}
-                        onClick={() => handleCreateDraft()}
-                      >
-                        <Plus className="h-3 w-3" />
-                        {t('skill.createDraft')}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-              </div>
-            </div>
-
-            {/* Right: version */}
-            <div className="flex min-h-0 flex-col overflow-hidden pt-5 lg:h-full lg:pt-0 lg:pl-6">
-              {showVersionSide ? (
-                selectedVersion ? (
-                <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto pr-0.5">
-                  <div className="shrink-0 space-y-3">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <Select value={selectedVersion} onValueChange={handleSelectVersion} disabled={isEditingDraft}>
-                      <SelectTrigger className="h-7 text-xs bg-background/80 w-auto gap-1.5 font-mono">
-                        <SelectValue placeholder={t('skill.selectVersion')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {versionOptions.map((version) => {
-                          const vPipeline = parsePipelineInfo(version.publishPipelineInfo);
-                          const isVersionPendingPublish = version.status === 'reviewing' && vPipeline?.status === 'APPROVED';
-                          return (
-                          <SelectItem key={version.version} value={version.version}>
-                            <span className="flex items-center gap-2">
-                              <span>{version.version}</span>
-                              {latestVersion === version.version && (
-                                <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 text-[10px] px-1 py-0 border-0">
-                                  {t('skill.latestVersion')}
-                                </Badge>
-                              )}
-                              {version.status === 'draft' && (
-                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] px-1 py-0 border-0">
-                                  {t('skill.versionStatus.draft')}
-                                </Badge>
-                              )}
-                              {version.status === 'reviewing' && (
-                                <Badge className={isVersionPendingPublish
-                                  ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 text-[10px] px-1 py-0 border-0'
-                                  : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 text-[10px] px-1 py-0 border-0'
-                                }>
-                                  {t(isVersionPendingPublish ? 'skill.versionStatus.pendingPublish' : 'skill.versionStatus.reviewing')}
-                                </Badge>
-                              )}
-                            </span>
-                          </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs shrink-0 gap-1 text-muted-foreground"
-                      onClick={() => setVersionSheetOpen(true)}
-                      disabled={isEditingDraft}
-                    >
-                      <History className="h-3 w-3" />
-                      {t('skill.versionHistory')}
-                    </Button>
-                    {currentVersionStatus && (
-                      <StatusBadge status={currentVersionStatus} label={currentVersionStatusLabel} />
-                    )}
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <Download className="h-3 w-3" />
-                      {t('skill.versionDownloads')}: {currentVersionSummary?.downloadCount ?? 0}
-                    </span>
-                  </div>
-
-                  {currentVersionStatus && !detail.enable && (
-                    <p className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
-                      <AlertTriangle className="h-3 w-3 shrink-0" />
-                      {t('skill.skillDisabledWarning')}
-                    </p>
-                  )}
-                  {currentVersionStatus && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                  {currentVersionStatus === 'draft' && (
-                    <>
-                      {isEditingDraft ? (
-                        <>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={handleStartEdit}
+                        >
+                          <Pencil className="h-3 w-3" />
+                          {t('skill.editDraft')}
+                        </Button>
+                        {copilotEnabled && (
                           <Button
                             variant="outline"
                             size="sm"
                             className="h-7 text-xs gap-1.5"
-                            onClick={handleCancelEdit}
-                            disabled={draftSaving}
+                            onClick={() => setOptimizeDialogOpen(true)}
                           >
-                            <X className="h-3 w-3" />
-                            {t('skill.cancelEdit')}
+                            <Sparkles className="h-3 w-3" />
+                            {t('skill.aiOptimize')}
                           </Button>
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs gap-1.5"
-                            onClick={handleSaveDraft}
-                            disabled={draftSaving}
-                          >
-                            <Save className="h-3 w-3" />
-                            {draftSaving ? t('common.loading') : t('skill.saveDraft')}
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1.5"
-                            onClick={handleStartEdit}
-                          >
-                            <Pencil className="h-3 w-3" />
-                            {t('skill.editDraft')}
-                          </Button>
-                          {copilotEnabled && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1.5"
-                              onClick={() => setOptimizeDialogOpen(true)}
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              {t('skill.aiOptimize')}
-                            </Button>
-                          )}
-                          <div className="h-4 w-px bg-border mx-0.5" />
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs gap-1.5"
-                            disabled={actionLoading}
-                            onClick={() => handleSubmit(selectedVersion)}
-                          >
-                            <Send className="h-3 w-3" />
-                            {currentPipelineInfo && currentPipelineInfo.status === 'REJECTED'
-                              ? t('skill.resubmit')
-                              : t('skill.submit')}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            disabled={actionLoading}
-                            onClick={handleDeleteDraft}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            {t('skill.deleteDraft')}
-                          </Button>
-                          {currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
-                            <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton />
-                          )}
-                          {globalAdmin && currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/40"
-                              disabled={actionLoading}
-                              onClick={() => setForcePublishConfirmOpen(true)}
-                            >
-                              <ShieldAlert className="h-3 w-3" />
-                              {t('skill.forcePublish')}
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </>
-                  )}
-
-                  {currentVersionStatus === 'reviewing' && (
-                    <>
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs gap-1.5"
-                        disabled={actionLoading || !!(currentPipelineInfo && currentPipelineInfo.status !== 'APPROVED')}
-                        onClick={() => handlePublish(selectedVersion)}
-                      >
-                        <CheckCircle2 className="h-3 w-3" />
-                        {currentPipelineInfo && currentPipelineInfo.status === 'IN_PROGRESS'
-                          ? t('skill.pipelineInProgress')
-                          : t('skill.publish')}
-                      </Button>
-                      {currentPipelineInfo && currentPipelineInfo.status === 'APPROVED' && (
-                        <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton />
-                      )}
-                      {globalAdmin && currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
-                        <>
+                        )}
+                        <div className="h-4 w-px bg-border mx-0.5" />
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          disabled={actionLoading}
+                          onClick={() => handleSubmit(selectedVersion)}
+                        >
+                          <Send className="h-3 w-3" />
+                          {currentPipelineInfo && currentPipelineInfo.status === 'REJECTED'
+                            ? t('skill.resubmit')
+                            : t('skill.submit')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          disabled={actionLoading}
+                          onClick={handleDeleteDraft}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          {t('skill.deleteDraft')}
+                        </Button>
+                        {currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
                           <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton />
+                        )}
+                        {globalAdmin && currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -999,103 +916,121 @@ export default function SkillDetailPage() {
                             <ShieldAlert className="h-3 w-3" />
                             {t('skill.forcePublish')}
                           </Button>
-                        </>
-                      )}
-                    </>
-                  )}
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
 
-                  {currentVersionStatus === 'online' && (
+                {currentVersionStatus === 'reviewing' && (
+                  <>
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs gap-1.5"
+                      disabled={actionLoading || !!(currentPipelineInfo && currentPipelineInfo.status !== 'APPROVED')}
+                      onClick={() => handlePublish(selectedVersion)}
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      {currentPipelineInfo && currentPipelineInfo.status === 'IN_PROGRESS'
+                        ? t('skill.pipelineInProgress')
+                        : t('skill.publish')}
+                    </Button>
+                    {currentPipelineInfo && currentPipelineInfo.status === 'APPROVED' && (
+                      <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton />
+                    )}
+                    {globalAdmin && currentPipelineInfo && currentPipelineInfo.status === 'REJECTED' && (
+                      <>
+                        <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} compact compactAlignButton />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/40"
+                          disabled={actionLoading}
+                          onClick={() => setForcePublishConfirmOpen(true)}
+                        >
+                          <ShieldAlert className="h-3 w-3" />
+                          {t('skill.forcePublish')}
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {currentVersionStatus === 'online' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1.5"
+                    disabled={actionLoading}
+                    onClick={() => handleOffline(selectedVersion)}
+                  >
+                    <PowerOff className="h-3 w-3" />
+                    {t('skill.offline')}
+                  </Button>
+                )}
+
+                {currentVersionStatus === 'offline' && (
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs gap-1.5"
+                    disabled={actionLoading}
+                    onClick={() => handleOnline(selectedVersion)}
+                  >
+                    <Power className="h-3 w-3" />
+                    {t('skill.online')}
+                  </Button>
+                )}
+
+                {(currentVersionStatus === 'online' || currentVersionStatus === 'offline') && (() => {
+                  const hasDraft = !!(detail.editingVersion || detail.reviewingVersion);
+                  const btn = (
                     <Button
                       variant="outline"
                       size="sm"
                       className="h-7 text-xs gap-1.5"
-                      disabled={actionLoading}
-                      onClick={() => handleOffline(selectedVersion)}
+                      disabled={actionLoading || hasDraft}
+                      onClick={() => handleCreateDraft(selectedVersion)}
                     >
-                      <PowerOff className="h-3 w-3" />
-                      {t('skill.offline')}
+                      <Plus className="h-3 w-3" />
+                      {t('skill.createDraftFrom')}
                     </Button>
-                  )}
-
-                  {currentVersionStatus === 'offline' && (
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs gap-1.5"
-                      disabled={actionLoading}
-                      onClick={() => handleOnline(selectedVersion)}
-                    >
-                      <Power className="h-3 w-3" />
-                      {t('skill.online')}
-                    </Button>
-                  )}
-
-                  {(currentVersionStatus === 'online' || currentVersionStatus === 'offline') && (() => {
-                    const hasDraft = !!(detail.editingVersion || detail.reviewingVersion);
-                    const btn = (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs gap-1.5"
-                        disabled={actionLoading || hasDraft}
-                        onClick={() => handleCreateDraft(selectedVersion)}
-                      >
-                        <Plus className="h-3 w-3" />
-                        {t('skill.createDraftFrom')}
-                      </Button>
-                    );
-                    return hasDraft ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>{btn}</span>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200">
-                          <span className="flex items-center gap-1.5">
-                            <AlertCircle className="h-3 w-3 shrink-0" />
-                            {t('skill.draftExistsTip')}
-                          </span>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : btn;
-                  })()}
-                  </div>
-                  )}
-
-                  </div>
-
-                  <div className="mt-auto flex min-h-0 flex-1 flex-col gap-3 border-t border-border/40 pt-3 lg:min-h-[17.5rem]">
-                    <div className="min-h-[5rem] shrink-0">
-                      {currentPipelineInfo ? (
-                        <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} onRefresh={() => loadDetail()} />
-                      ) : null}
-                    </div>
-                    <div className="flex min-h-[12rem] flex-1 flex-col">
-                      {currentVersionStatus !== 'draft' ? (
-                        <CliCommandCard
-                          commands={cliCommands}
-                          onDownload={() => handleDownload(selectedVersion)}
-                          downloadFileName={`${skillName}-${selectedVersion}.zip`}
-                          className="shadow-none flex-1 min-h-0 h-full"
-                        />
-                      ) : (
-                        <Card className="flex flex-1 flex-col overflow-hidden border-dashed py-0 gap-0 shadow-none">
-                          <div className="border-b bg-muted/30 px-4 py-3">
-                            <h2 className="flex items-center gap-2 text-sm font-semibold">
-                              <Download className="h-4 w-4 text-muted-foreground" />
-                              {t('common.cliUsage.title')}
-                            </h2>
-                          </div>
-                          <CardContent className="flex flex-1 flex-col items-center justify-center p-4">
-                            <p className="max-w-sm text-center text-xs text-muted-foreground">
-                              {t('skill.draftNoInstallHint')}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  </div>
+                  );
+                  return hasDraft ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>{btn}</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200">
+                        <span className="flex items-center gap-1.5">
+                          <AlertCircle className="h-3 w-3 shrink-0" />
+                          {t('skill.draftExistsTip')}
+                        </span>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : btn;
+                })()}
                 </div>
-              ) : (
-                <div className="space-y-3">
+                )}
+
+                {/* Pipeline status (inside version card) */}
+                {currentPipelineInfo && (
+                  <PipelineStatusDisplay pipelineInfo={currentPipelineInfo} onRefresh={() => loadDetail()} />
+                )}
+              </CardContent>
+
+              {/* CLI install (inside Card but outside CardContent for aligned padding) */}
+              {currentVersionStatus !== 'draft' && (
+                <CliCommandCard
+                  commands={cliCommands}
+                  onDownload={() => handleDownload(selectedVersion)}
+                  downloadFileName={`${skillName}-${selectedVersion}.zip`}
+                  className="shadow-none border-0 border-t border-border/40 rounded-none"
+                />
+              )}
+            </Card>
+            ) : (
+              <Card className="overflow-hidden py-0 gap-0">
+                <CardContent className="p-4 space-y-3">
                   <p className="text-sm text-muted-foreground">{t('skill.selectVersion')}</p>
                   <Button
                     variant="outline"
@@ -1106,72 +1041,118 @@ export default function SkillDetailPage() {
                     <History className="h-3 w-3" />
                     {t('skill.versionHistory')}
                   </Button>
-                </div>
-              )
-            ) : (
-              <div className="flex flex-1 items-center justify-center px-2 text-center text-xs text-muted-foreground">
+                </CardContent>
+              </Card>
+            )
+          ) : (
+            <Card className="overflow-hidden py-0 gap-0">
+              <CardContent className="flex items-center justify-center p-4 text-xs text-muted-foreground">
                 {t('skill.noVersions')}
-              </div>
-            )}
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Empty state: no versions, create draft */}
+          {!selectedVersion && !detail.editingVersion && !detail.reviewingVersion && versions.length === 0 && (
+            <Card className="overflow-hidden py-0 gap-0">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  {isCreatingNewDraft ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1.5"
+                        onClick={handleCancelEdit}
+                        disabled={draftSaving}
+                      >
+                        <X className="h-3 w-3" />
+                        {t('skill.cancelEdit')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs gap-1.5"
+                        disabled={draftSaving}
+                        onClick={handleSaveDraft}
+                      >
+                        {draftSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                        {t('skill.createDraft')}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs gap-1.5"
+                      disabled={actionLoading}
+                      onClick={() => handleCreateDraft()}
+                    >
+                      <Plus className="h-3 w-3" />
+                      {t('skill.createDraft')}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
-      </div>
 
-      {/* Version labels + business tags (one row, two columns) */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
-        <Card className="overflow-hidden py-0 gap-0">
-          <div className="px-4 py-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5" />
-                {t('common.versionLabels.title')}
-              </span>
-              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setLabelDialogOpen(true)}>
-                <Pencil className="h-2.5 w-2.5" />
-              </Button>
-            </div>
-            <div className="flex min-h-[24px] flex-wrap content-start gap-1.5">
-              {Object.entries(detail.labels || {}).length > 0 ? (
-                Object.entries(detail.labels || {}).map(([key, val]) => (
-                  <Badge
-                    key={key}
-                    variant={key === 'latest' ? 'default' : 'secondary'}
-                    className={cn(
-                      'text-[10px] px-1.5 py-0 font-mono',
-                      key === 'latest' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-0',
-                    )}
-                  >
-                    {key} → {val}
-                  </Badge>
-                ))
-              ) : (
-                <span className="text-xs text-muted-foreground">{t('common.versionLabels.noLabels')}</span>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        <Card className="overflow-hidden py-0 gap-0">
-          <div className="px-4 py-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5" />
+        {/* Right column: bizTags + version labels (separate cards) */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* BizTags */}
+          <Card className="overflow-hidden py-0 gap-0">
+            <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
+              <span className="text-xs font-semibold flex items-center gap-2">
+                <Tag className="h-3.5 w-3.5 text-muted-foreground" />
                 {t('common.bizTags')}
               </span>
               <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setBizTagDialogOpen(true)}>
                 <Pencil className="h-2.5 w-2.5" />
               </Button>
             </div>
-            <div className="flex min-h-[24px] flex-wrap content-start gap-1.5">
-              {bizTags.length > 0 ? (
-                bizTags.map((tag) => <DetailTagChip key={tag} label={tag} />)
-              ) : (
-                <span className="text-xs text-muted-foreground">{t('skill.noBizTags')}</span>
-              )}
+            <CardContent className="p-3">
+              <div className="flex min-h-[20px] flex-wrap content-start gap-1.5">
+                {bizTags.length > 0 ? (
+                  bizTags.map((tag) => <DetailTagChip key={tag} label={tag} />)
+                ) : (
+                  <span className="text-xs text-muted-foreground">{t('skill.noBizTags')}</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Version Labels */}
+          <Card className="overflow-hidden py-0 gap-0">
+            <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
+              <span className="text-xs font-semibold flex items-center gap-2">
+                <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                {t('common.versionLabels.title')}
+              </span>
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setLabelDialogOpen(true)}>
+                <Pencil className="h-2.5 w-2.5" />
+              </Button>
             </div>
-          </div>
-        </Card>
+            <CardContent className="p-3">
+              <div className="flex min-h-[20px] flex-wrap content-start gap-1.5">
+                {Object.entries(detail.labels || {}).length > 0 ? (
+                  Object.entries(detail.labels || {}).map(([key, val]) => (
+                    <Badge
+                      key={key}
+                      variant={key === 'latest' ? 'default' : 'secondary'}
+                      className={cn(
+                        'text-[10px] px-1.5 py-0 font-mono',
+                        key === 'latest' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-0',
+                      )}
+                    >
+                      {key} → {val}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground">{t('common.versionLabels.noLabels')}</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* ===== Tabs Content ===== */}
