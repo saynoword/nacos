@@ -821,8 +821,8 @@ export default function PromptDetailPage() {
               </Button>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap min-h-[24px]">
-              {meta.bizTags && parseBizTags(meta.bizTags).length > 0 ? (
-                parseBizTags(meta.bizTags).map((tag) => <DetailTagChip key={tag} label={tag} />)
+              {meta.bizTags && meta.bizTags.length > 0 ? (
+                meta.bizTags.map((tag: string) => <DetailTagChip key={tag} label={tag} />)
               ) : (
                 <span className="text-xs text-muted-foreground">{t('prompt.noLabels')}</span>
               )}
