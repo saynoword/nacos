@@ -137,7 +137,7 @@ public class AiResourceTraceService {
      * Update resource description.
      */
     public static final String OP_UPDATE_DESCRIPTION = "UPDATE_DESCRIPTION";
-    
+
     /**
      * Update resource bizTags.
      */

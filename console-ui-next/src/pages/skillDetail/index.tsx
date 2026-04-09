@@ -77,7 +77,7 @@ import dayjs from 'dayjs';
 import { SkillVersionTimeline } from '../skillManagement/components/SkillVersionTimeline';
 import { PipelineStatusDisplay } from '../skillManagement/components/PipelineStatusDisplay';
 import { SkillOptimizeDialog } from '@/components/ai/skill/SkillOptimizeDialog';
-import { LabelBindDialog } from '@/components/ai/LabelBindDialog';
+import { LabelManagerDialog } from '@/components/ai/LabelManagerDialog';
 import { BizTagEditDialog } from '@/components/ai/BizTagEditDialog';
 import { DetailTagChip } from '@/components/ai/DetailTagChip';
 import { CliCommandCard } from '@/components/ai/CliCommandCard';
@@ -362,10 +362,13 @@ export default function SkillDetailPage() {
   // ===== Labels handler =====
 
   const handleSaveLabels = async (labels: Record<string, string>) => {
+    // Preserve the "latest" label as a safety measure
+    const latestValue = currentDetail?.labels?.latest;
+    const merged = latestValue ? { ...labels, latest: latestValue } : labels;
     await skillApi.updateLabels({
       namespaceId,
       skillName,
-      labels: JSON.stringify(labels),
+      labels: JSON.stringify(merged),
     });
     toast.success(t('common.versionLabels.updateSuccess'));
     await loadDetail();
@@ -537,6 +540,12 @@ export default function SkillDetailPage() {
   };
 
   const handleOffline = async (version: string) => {
+    // Block offline if this version is pointed to by the "latest" label
+    const latestLabelVersion = currentDetail?.labels?.latest;
+    if (latestLabelVersion && latestLabelVersion === version) {
+      toast.error(t('common.labelManager.cannotOfflineLatest'));
+      return;
+    }
     setActionLoading(true);
     try {
       await skillApi.offline({ namespaceId, skillName, version });
@@ -646,10 +655,6 @@ export default function SkillDetailPage() {
     ? t(`skill.versionStatus.${currentVersionStatus}`)
     : '-';
   const onlineVersionCountLabel = t('skill.onlineCount', { count: detail.onlineCnt ?? 0 });
-  // Labels bound to the currently selected version
-  const currentVersionLabels = Object.entries(detail.labels || {}).filter(
-    ([, val]) => val === selectedVersion,
-  );
 
   // Pipeline info for current version
   const currentPipelineInfo = parsePipelineInfo(currentVersionSummary?.publishPipelineInfo);
@@ -817,6 +822,61 @@ export default function SkillDetailPage() {
                     {t('common.from')}: {detail.from}
                   </span>
                 )}
+              </div>
+
+              {/* BizTags & Labels cards */}
+              <div className="flex gap-3 mt-3">
+                <Card className="flex-1 overflow-hidden py-0 gap-0">
+                  <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
+                    <h2 className="text-xs font-semibold flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                      {t('common.bizTags')}
+                    </h2>
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setBizTagDialogOpen(true)}>
+                      <Pencil className="h-2.5 w-2.5" />
+                    </Button>
+                  </div>
+                  <CardContent className="px-3 py-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {bizTags.length > 0 ? (
+                        bizTags.map((tag) => <DetailTagChip key={tag} label={tag} />)
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{t('skill.noBizTags')}</span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="flex-1 overflow-hidden py-0 gap-0">
+                  <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
+                    <h2 className="text-xs font-semibold flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                      {t('common.versionLabels.title')}
+                    </h2>
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setLabelDialogOpen(true)}>
+                      <Pencil className="h-2.5 w-2.5" />
+                    </Button>
+                  </div>
+                  <CardContent className="px-3 py-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {Object.entries(detail.labels || {}).length > 0 ? (
+                        Object.entries(detail.labels || {}).map(([key, val]) => (
+                          <Badge
+                            key={key}
+                            variant={key === 'latest' ? 'default' : 'secondary'}
+                            className={cn(
+                              'text-[10px] px-1.5 py-0 font-mono',
+                              key === 'latest' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-0',
+                            )}
+                          >
+                            {key} → {val}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{t('common.versionLabels.noLabels')}</span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Version lifecycle action buttons */}
@@ -1180,67 +1240,6 @@ export default function SkillDetailPage() {
                 </Card>
               )}
 
-              <Card className="overflow-hidden py-0 gap-0">
-                <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-muted-foreground" />
-                    {t('common.bizTags')}
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setBizTagDialogOpen(true)}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                </div>
-                <CardContent className="p-3.5">
-                  {bizTags.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {bizTags.map((tag) => (
-                        <DetailTagChip key={tag} label={tag} />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">{t('skill.noBizTags')}</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Labels card (read-only for current version) */}
-              <Card className="overflow-hidden py-0 gap-0">
-                <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-muted-foreground" />
-                    {t('common.versionLabels.title')}
-                  </h2>
-                  {selectedVersion && currentVersionStatus !== 'draft' && currentVersionStatus !== 'reviewing' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setLabelDialogOpen(true)}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-                <CardContent className="p-3.5">
-                  {currentVersionLabels.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {currentVersionLabels.map(([key]) => (
-                        <DetailTagChip key={key} label={key} />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {t('common.versionLabels.noLabels')}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
             </div>
           </div>
         </TabsContent>
@@ -1264,15 +1263,13 @@ export default function SkillDetailPage() {
         onSave={handleSaveBizTags}
       />
 
-      {selectedVersion && (
-        <LabelBindDialog
-          open={labelDialogOpen}
-          onOpenChange={setLabelDialogOpen}
-          version={selectedVersion}
-          allLabels={detail.labels ?? {}}
-          onSave={handleSaveLabels}
-        />
-      )}
+      <LabelManagerDialog
+        open={labelDialogOpen}
+        onOpenChange={setLabelDialogOpen}
+        allLabels={detail.labels ?? {}}
+        availableVersions={versions.filter(v => v.status === 'online' || v.status === 'offline').map(v => v.version)}
+        onSave={handleSaveLabels}
+      />
       
       <Dialog open={createDraftDialogOpen} onOpenChange={setCreateDraftDialogOpen}>
         <DialogContent>

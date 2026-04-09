@@ -73,7 +73,7 @@ import dayjs from 'dayjs';
 import { parsePipelineInfo } from '@/types/skill';
 import { PromptVersionTimeline } from '@/pages/promptManagement/components/PromptVersionTimeline';
 import { PipelineStatusDisplay } from '@/pages/skillManagement/components/PipelineStatusDisplay';
-import { LabelBindDialog } from '@/components/ai/LabelBindDialog';
+import { LabelManagerDialog } from '@/components/ai/LabelManagerDialog';
 import { BizTagEditDialog } from '@/components/ai/BizTagEditDialog';
 import { DetailTagChip } from '@/components/ai/DetailTagChip';
 
@@ -187,10 +187,6 @@ export default function PromptDetailPage() {
   const currentPipelineInfoRaw = currentVersionSummary?.publishPipelineInfo;
   const currentPipelineInfo = parsePipelineInfo(currentPipelineInfoRaw);
 
-  // Labels bound to the currently selected version
-  const currentVersionLabels = Object.entries(labelsMap).filter(
-    ([, val]) => val === selectedVersion,
-  );
 
   // Load governance detail
   const loadGovernance = useCallback(async () => {
@@ -293,6 +289,12 @@ export default function PromptDetailPage() {
   };
 
   const handleOffline = async (version: string) => {
+    // Block offline if this version is pointed to by the "latest" label
+    const latestLabelVersion = labelsMap?.latest;
+    if (latestLabelVersion && latestLabelVersion === version) {
+      toast.error(t('common.labelManager.cannotOfflineLatest'));
+      return;
+    }
     const ok = await offlineVersion({ promptKey, version, namespaceId });
     if (ok) { toast.success(t('prompt.offlineSuccess')); await refreshAfterAction(version); }
   };
@@ -392,7 +394,10 @@ export default function PromptDetailPage() {
 
   // --- Labels ---
   const handleSaveLabels = async (newLabels: Record<string, string>) => {
-    const ok = await updateLabels({ promptKey, labels: JSON.stringify(newLabels), namespaceId });
+    // Preserve the "latest" label as a safety measure
+    const latestValue = labelsMap?.latest;
+    const merged = latestValue ? { ...newLabels, latest: latestValue } : newLabels;
+    const ok = await updateLabels({ promptKey, labels: JSON.stringify(merged), namespaceId });
     if (ok) {
       toast.success(t('prompt.labelsUpdateSuccess'));
       await loadGovernance();
@@ -697,13 +702,61 @@ export default function PromptDetailPage() {
                     {dayjs(meta.gmtModified).format('YYYY-MM-DD HH:mm')}
                   </span>
                 )}
-                {meta.bizTags && meta.bizTags.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    {meta.bizTags.slice(0, 3).map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">{tag}</Badge>
-                    ))}
+              </div>
+
+              {/* BizTags & Labels cards */}
+              <div className="flex gap-3 mt-3">
+                <Card className="flex-1 overflow-hidden py-0 gap-0">
+                  <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
+                    <h2 className="text-xs font-semibold flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                      {t('common.bizTags')}
+                    </h2>
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setBizTagDialogOpen(true)}>
+                      <Pencil className="h-2.5 w-2.5" />
+                    </Button>
                   </div>
-                )}
+                  <CardContent className="px-3 py-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {meta.bizTags && parseBizTags(meta.bizTags).length > 0 ? (
+                        parseBizTags(meta.bizTags).map((tag) => <DetailTagChip key={tag} label={tag} />)
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{t('prompt.noLabels')}</span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="flex-1 overflow-hidden py-0 gap-0">
+                  <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between">
+                    <h2 className="text-xs font-semibold flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                      {t('common.versionLabels.title')}
+                    </h2>
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setLabelDialogOpen(true)}>
+                      <Pencil className="h-2.5 w-2.5" />
+                    </Button>
+                  </div>
+                  <CardContent className="px-3 py-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {Object.entries(labelsMap).length > 0 ? (
+                        Object.entries(labelsMap).map(([key, val]) => (
+                          <Badge
+                            key={key}
+                            variant={key === 'latest' ? 'default' : 'secondary'}
+                            className={cn(
+                              'text-[10px] px-1.5 py-0 font-mono',
+                              key === 'latest' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-0',
+                            )}
+                          >
+                            {key} → {val}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{t('common.versionLabels.noLabels')}</span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Version lifecycle action buttons */}
@@ -985,56 +1038,6 @@ export default function PromptDetailPage() {
             </Card>
           )}
 
-          {/* BizTags card */}
-          <Card className="overflow-hidden py-0 gap-0">
-            <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Tag className="h-4 w-4 text-muted-foreground" />
-                {t('common.bizTags')}
-              </h2>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setBizTagDialogOpen(true)}>
-                <Pencil className="h-3 w-3" />
-              </Button>
-            </div>
-            <CardContent className="p-3.5">
-              {meta.bizTags && meta.bizTags.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {meta.bizTags.map((tag) => (
-                    <DetailTagChip key={tag} label={tag} />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">{t('prompt.noLabels')}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Version Labels card */}
-          <Card className="overflow-hidden py-0 gap-0">
-            <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Tag className="h-4 w-4 text-muted-foreground" />
-                {t('common.versionLabels.title')}
-              </h2>
-              {selectedVersion && currentVersionStatus !== 'draft' && currentVersionStatus !== 'reviewing' && (
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setLabelDialogOpen(true)}>
-                  <Pencil className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-            <CardContent className="p-3.5">
-              {currentVersionLabels.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {currentVersionLabels.map(([key]) => (
-                    <DetailTagChip key={key} label={key} />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">{t('common.versionLabels.noLabels')}</p>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Variables Card */}
           <Card className="overflow-hidden py-0 gap-0">
             <div className="px-4 py-3 border-b bg-muted/30">
@@ -1311,16 +1314,14 @@ export default function PromptDetailPage() {
         onSave={handleSaveBizTags}
       />
 
-      {/* Label Bind Dialog */}
-      {selectedVersion && (
-        <LabelBindDialog
-          open={labelDialogOpen}
-          onOpenChange={setLabelDialogOpen}
-          version={selectedVersion}
-          allLabels={labelsMap}
-          onSave={handleSaveLabels}
-        />
-      )}
+      {/* Label Manager Dialog */}
+      <LabelManagerDialog
+        open={labelDialogOpen}
+        onOpenChange={setLabelDialogOpen}
+        allLabels={labelsMap}
+        availableVersions={(meta.versionDetails || []).filter(v => v.status === 'online' || v.status === 'offline').map(v => v.version)}
+        onSave={handleSaveLabels}
+      />
     </div>
   );
 }
