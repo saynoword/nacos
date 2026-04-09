@@ -208,7 +208,7 @@ export default function PluginManagementPage() {
                           </TableCell>
                           <TableCell className="text-center">
                             <Button
-                              variant="ghost"
+                              variant="link"
                               size="sm"
                               className="h-auto px-0"
                               onClick={() => { setSelectedPlugin(plugin); setDetailOpen(true); }}
