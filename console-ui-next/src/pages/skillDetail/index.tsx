@@ -772,7 +772,7 @@ export default function SkillDetailPage() {
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Select value={selectedVersion} onValueChange={handleSelectVersion} disabled={isEditingDraft}>
-                    <SelectTrigger className="h-7 text-xs bg-background/80 w-36 gap-1.5 font-mono">
+                    <SelectTrigger className="h-7 text-xs bg-background/80 w-36 gap-1.5 font-mono [&>span:first-child]:flex-1 [&>span:first-child]:flex [&>span:first-child]:justify-center">
                       <SelectValue placeholder={t('skill.selectVersion')} />
                     </SelectTrigger>
                     <SelectContent>
