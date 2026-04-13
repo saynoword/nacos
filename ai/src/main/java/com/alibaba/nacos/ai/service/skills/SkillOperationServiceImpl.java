@@ -1217,6 +1217,7 @@ public class SkillOperationServiceImpl implements SkillOperationService {
         String provider = resolveSkillStorageProvider();
         Skill skill = new Skill();
         skill.setNamespaceId(namespaceId);
+        skill.setName(skillName);
         Map<String, SkillResource> resourceMap = new HashMap<>(files.size());
 
         // Read storage files one by one, handle differently based on filename:

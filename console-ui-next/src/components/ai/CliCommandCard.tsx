@@ -33,16 +33,16 @@ export function CliCommandCard({ commands, className, onDownload, downloadFileNa
   const content = (
     <div className={cn(
       'grid gap-3',
-      onDownload && commands.length > 0 ? 'grid-cols-1 sm:grid-cols-2 items-end' : 'grid-cols-1',
+      onDownload && commands.length > 0 ? 'grid-cols-1 sm:grid-cols-2 items-stretch' : 'grid-cols-1',
     )}>
       {/* Download ZIP section */}
       {onDownload && (
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-foreground">{t('common.cliUsage.manualDownload')}</p>
+        <div className="flex flex-col">
+          <p className="text-xs font-medium text-foreground mb-2">{t('common.cliUsage.manualDownload')}</p>
           <Button
             variant="outline"
             size="sm"
-            className="w-full text-xs gap-1.5"
+            className="w-full text-xs gap-1.5 flex-1 min-h-[44px]"
             disabled={downloadDisabled}
             onClick={onDownload}
           >
