@@ -878,6 +878,9 @@ public class EmbeddedConfigInfoPersistServiceImpl implements ConfigInfoPersistSe
         if (!StringUtils.isBlank(content)) {
             context.putWhereParameter(FieldConstant.CONTENT, content);
         }
+        if (configAdvanceInfo != null && Boolean.TRUE.equals(configAdvanceInfo.get(FieldConstant.EXCLUDE_INTERNAL_GROUPS))) {
+            context.putWhereParameter(FieldConstant.EXCLUDE_INTERNAL_GROUPS, Boolean.TRUE);
+        }
         context.setStartRow((pageNo - 1) * pageSize);
         context.setPageSize(pageSize);
         
@@ -1033,6 +1036,9 @@ public class EmbeddedConfigInfoPersistServiceImpl implements ConfigInfoPersistSe
         if (StringUtils.isNotBlank(types)) {
             String[] typesArr = types.split(Symbols.COMMA);
             context.putWhereParameter(FieldConstant.TYPE, typesArr);
+        }
+        if (configAdvanceInfo != null && Boolean.TRUE.equals(configAdvanceInfo.get(FieldConstant.EXCLUDE_INTERNAL_GROUPS))) {
+            context.putWhereParameter(FieldConstant.EXCLUDE_INTERNAL_GROUPS, Boolean.TRUE);
         }
         
         if (StringUtils.isNotBlank(configTags)) {
