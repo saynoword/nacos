@@ -58,6 +58,7 @@ class AiResourceGroupTypeTest {
         assertTrue(AiResourceGroupType.matches("agentspec__myAgent", "resource_foo"));
         assertTrue(AiResourceGroupType.matches("agentspec__myAgent", "manifest.json"));
         assertTrue(AiResourceGroupType.matches("agentspec__myAgent", "agentspec_index.json"));
+        assertTrue(AiResourceGroupType.matches("agentspec__enc.abc__enc.def", "enc.7265736f75726365"));
     }
     
     @Test
