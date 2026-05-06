@@ -63,6 +63,7 @@ public enum AiResourceGroupType {
     
     AGENTSPEC("agentspec__", new DataIdMatcher[]{
             DataIdMatcher.like("resource_%"),
+            DataIdMatcher.like("enc.%"),
             DataIdMatcher.exact("manifest.json"),
             DataIdMatcher.exact("agentspec_index.json")
     }),
