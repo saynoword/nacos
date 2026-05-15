@@ -21,6 +21,7 @@ import com.alibaba.nacos.config.server.exception.NacosConfigException;
 import com.alibaba.nacos.config.server.service.query.enums.ResponseCode;
 import com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest;
 import com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainResponse;
+import com.alibaba.nacos.plugin.datasource.constants.AiResourceGroupType;
 import com.alibaba.nacos.sys.env.EnvUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,5 +74,26 @@ public class ConfigQueryChainService {
             return ConfigQueryChainResponse.buildFailResponse(ResponseCode.FAIL.getCode(),
                 e.getMessage());
         }
+    }
+    
+    /**
+     * Handles a user-facing configuration query request. Returns {@code CONFIG_NOT_FOUND} for AI
+     * resource configs to keep them hidden from external callers; otherwise delegates to
+     * {@link #handle(ConfigQueryChainRequest)}.
+     *
+     * <p>Server-side internal callers (AI module bootstrap, migrations, MCP/A2A/Skill operation
+     * services) must keep using {@link #handle(ConfigQueryChainRequest)} so they can read AI
+     * resources to materialize their domain APIs.
+     *
+     * @param request the configuration query request object
+     * @return the configuration query response object
+     */
+    public ConfigQueryChainResponse handleForClient(ConfigQueryChainRequest request) {
+        if (AiResourceGroupType.matches(request.getGroup(), request.getDataId())) {
+            ConfigQueryChainResponse response = new ConfigQueryChainResponse();
+            response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
+            return response;
+        }
+        return handle(request);
     }
 }
