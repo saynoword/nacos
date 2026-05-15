@@ -89,7 +89,8 @@ public class ConfigQueryRequestHandler
             
             ConfigQueryChainRequest chainRequest = ConfigChainRequestExtractorService.getExtractor()
                 .extract(request, meta);
-            ConfigQueryChainResponse chainResponse = configQueryChainService.handle(chainRequest);
+            ConfigQueryChainResponse chainResponse =
+                configQueryChainService.handleForClient(chainRequest);
             
             if (ResponseCode.FAIL.getCode() == chainResponse.getResultCode()) {
                 return ConfigQueryResponse.buildFailResponse(ResponseCode.FAIL.getCode(),

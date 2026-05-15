@@ -406,4 +406,25 @@ class ConfigServletInnerTest {
         assertEquals(HttpServletResponse.SC_CONFLICT + "", actualValue);
         
     }
+    
+    @Test
+    void testDoGetConfigBlockedForAiResource() throws Exception {
+        // AI resource group/dataId pair should short-circuit to NOT_FOUND via handleForClient,
+        // without touching the cache (no ConfigCacheService stub needed).
+        String dataId = "SKILL.md";
+        String group = "skill_enc.6d79__enc.312e";
+        String tenant = "tenant" + System.currentTimeMillis();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("dataId", dataId);
+        request.setParameter("group", group);
+        request.setParameter("tenant", tenant);
+        request.setRemoteAddr("localhost");
+        request.addHeader(CLIENT_APPNAME_HEADER, "test");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        
+        String actualValue =
+            configServletInner.doGetConfig(request, response, dataId, group, tenant, "", "true",
+                "localhost", ApiVersionEnum.V1);
+        assertEquals(HttpServletResponse.SC_NOT_FOUND + "", actualValue);
+    }
 }

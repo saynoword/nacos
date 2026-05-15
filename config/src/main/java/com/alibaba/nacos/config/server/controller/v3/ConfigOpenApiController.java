@@ -85,7 +85,8 @@ public class ConfigOpenApiController {
         RequestContext requestContext = RequestContextHolder.getContext();
         String sourceIp = requestContext.getBasicContext().getAddressContext().getSourceIp();
         ConfigQueryChainRequest chainRequest = buildQueryChainRequest(configForm, sourceIp);
-        ConfigQueryChainResponse chainResponse = configQueryChainService.handle(chainRequest);
+        ConfigQueryChainResponse chainResponse =
+            configQueryChainService.handleForClient(chainRequest);
         if (Objects.isNull(chainResponse.getContent())) {
             traceQuery(configForm, chainResponse, requestContext, sourceIp,
                 ConfigTraceService.PULL_TYPE_NOTFOUND);
