@@ -16,6 +16,7 @@
 
 package com.alibaba.nacos.config.server.controller.v3;
 
+import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.api.config.model.ConfigBasicInfo;
 import com.alibaba.nacos.api.config.model.ConfigCloneInfo;
 import com.alibaba.nacos.api.config.model.ConfigGrayInfo;
@@ -69,6 +70,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -161,6 +163,24 @@ class ConfigControllerV3Test {
                 .param("tag", "");
         int actualValue = mockmvc.perform(builder).andReturn().getResponse().getStatus();
         assertEquals(200, actualValue);
+    }
+    
+    @Test
+    void testGetConfigBlockedForAiResource() throws Exception {
+        MockHttpServletRequestBuilder builder =
+            MockMvcRequestBuilders.get(Constants.CONFIG_ADMIN_V3_PATH)
+                .param("dataId", "SKILL.md")
+                .param("groupName", "skill_enc.6d79__enc.312e")
+                .param("namespaceId", "").param("tag", "");
+        try {
+            mockmvc.perform(builder);
+        } catch (Exception e) {
+            Throwable cause = e.getCause();
+            assertTrue(cause instanceof NacosException);
+            assertEquals(NacosException.NOT_FOUND, ((NacosException) cause).getErrCode());
+            return;
+        }
+        throw new AssertionError("Expected NacosApiException to be thrown");
     }
     
     @Test

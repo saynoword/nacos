@@ -60,6 +60,7 @@ import com.alibaba.nacos.console.handler.config.ConfigHandler;
 import com.alibaba.nacos.console.handler.impl.ConditionFunctionEnabled;
 import com.alibaba.nacos.console.handler.impl.inner.EnabledInnerHandler;
 import com.alibaba.nacos.core.namespace.repository.NamespacePersistService;
+import com.alibaba.nacos.plugin.datasource.constants.AiResourceGroupType;
 import com.alibaba.nacos.plugin.encryption.handler.EncryptionHandler;
 import com.alibaba.nacos.sys.utils.InetUtils;
 import jakarta.servlet.ServletException;
@@ -155,6 +156,9 @@ public class ConfigInnerHandler implements ConfigHandler {
     @Override
     public ConfigDetailInfo getConfigDetail(String dataId, String group, String namespaceId)
         throws NacosException {
+        if (AiResourceGroupType.matches(group, dataId)) {
+            return null;
+        }
         ConfigAllInfo configAllInfo =
             configInfoPersistService.findConfigAllInfo(dataId, group, namespaceId);
         if (null == configAllInfo) {

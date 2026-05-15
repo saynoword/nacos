@@ -71,6 +71,7 @@ import com.alibaba.nacos.core.namespace.repository.NamespacePersistService;
 import com.alibaba.nacos.core.paramcheck.ExtractorManager;
 import com.alibaba.nacos.plugin.auth.constant.ActionTypes;
 import com.alibaba.nacos.plugin.auth.constant.SignType;
+import com.alibaba.nacos.plugin.datasource.constants.AiResourceGroupType;
 import com.alibaba.nacos.plugin.encryption.handler.EncryptionHandler;
 import com.alibaba.nacos.sys.utils.InetUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -175,6 +176,10 @@ public class ConfigControllerV3 {
         // check params
         String dataId = configForm.getDataId();
         String groupName = configForm.getGroupName();
+        if (AiResourceGroupType.matches(groupName, dataId)) {
+            throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
+                "Config not exist, please publish Config first.");
+        }
         ConfigAllInfo configAllInfo =
             configInfoPersistService.findConfigAllInfo(dataId, groupName, namespaceId);
         if (Objects.isNull(configAllInfo)) {

@@ -183,6 +183,13 @@ class ConfigInnerHandlerTest {
     }
     
     @Test
+    void getConfigDetailBlockedForAiResource() throws NacosException {
+        // AI resource group/dataId pair must short-circuit to null without touching persistence.
+        assertNull(
+            configInnerHandler.getConfigDetail("SKILL.md", "skill_enc.6d79__enc.312e", "public"));
+    }
+    
+    @Test
     void publishConfig() throws NacosException {
         ConfigForm configForm = new ConfigForm();
         configForm.setDataId("dataId");
