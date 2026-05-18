@@ -316,6 +316,11 @@ public class ConfigControllerV3 {
                     LOGGER.warn("[deleteConfigs] configInfo is null, id: {}", id);
                     continue;
                 }
+                if (AiResourceGroupType.matches(configInfo.getGroup(), configInfo.getDataId())) {
+                    LOGGER.warn("[deleteConfigs] skip AI resource config: {}/{}",
+                        configInfo.getGroup(), configInfo.getDataId());
+                    continue;
+                }
                 configOperationService.deleteConfig(configInfo.getDataId(), configInfo.getGroup(),
                     configInfo.getTenant(), null, clientIp, srcUser, Constants.HTTP);
             }
@@ -635,6 +640,11 @@ public class ConfigControllerV3 {
         List<ZipUtils.ZipItem> zipItemList = new ArrayList<>();
         List<ConfigMetadata.ConfigExportItem> configMetadataItems = new ArrayList<>();
         for (ConfigAllInfo ci : dataList) {
+            if (AiResourceGroupType.matches(ci.getGroup(), ci.getDataId())) {
+                LOGGER.warn("[exportConfig] skip AI resource config: {}/{}", ci.getGroup(),
+                    ci.getDataId());
+                continue;
+            }
             ConfigMetadata.ConfigExportItem configMetadataItem =
                 new ConfigMetadata.ConfigExportItem();
             configMetadataItem.setAppName(ci.getAppName());
@@ -709,6 +719,11 @@ public class ConfigControllerV3 {
         List<ConfigAllInfo> configInfoList4Clone = new ArrayList<>(queryedDataList.size());
         
         for (ConfigAllInfo ci : queryedDataList) {
+            if (AiResourceGroupType.matches(ci.getGroup(), ci.getDataId())) {
+                LOGGER.warn("[cloneConfig] skip AI resource config: {}/{}", ci.getGroup(),
+                    ci.getDataId());
+                continue;
+            }
             ConfigCloneInfo paramBean = configBeansMap.get(ci.getId());
             ConfigAllInfo ci4save = new ConfigAllInfo();
             ci4save.setTenant(namespaceId);
@@ -727,6 +742,10 @@ public class ConfigControllerV3 {
             ci4save.setEncryptedDataKey(
                 ci.getEncryptedDataKey() == null ? StringUtils.EMPTY : ci.getEncryptedDataKey());
             configInfoList4Clone.add(ci4save);
+        }
+        if (configInfoList4Clone.isEmpty()) {
+            failedData.put("succCount", 0);
+            return Result.failure(ErrorCode.DATA_EMPTY, failedData);
         }
         if (StringUtils.isBlank(srcUser)) {
             srcUser = RequestUtil.getSrcUserName(request);

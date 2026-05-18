@@ -198,6 +198,11 @@ public class ConfigInnerHandler implements ConfigHandler {
                 LOGGER.warn("[deleteConfigs] configInfo is null, id: {}", id);
                 continue;
             }
+            if (AiResourceGroupType.matches(configInfo.getGroup(), configInfo.getDataId())) {
+                LOGGER.warn("[deleteConfigs] skip AI resource config: {}/{}",
+                    configInfo.getGroup(), configInfo.getDataId());
+                continue;
+            }
             configOperationService.deleteConfig(configInfo.getDataId(), configInfo.getGroup(),
                 configInfo.getTenant(),
                 null, clientIp, srcUser, Constants.HTTP);
@@ -269,6 +274,11 @@ public class ConfigInnerHandler implements ConfigHandler {
         List<ZipUtils.ZipItem> zipItemList = new ArrayList<>();
         List<ConfigMetadata.ConfigExportItem> configMetadataItems = new ArrayList<>();
         for (ConfigAllInfo ci : dataList) {
+            if (AiResourceGroupType.matches(ci.getGroup(), ci.getDataId())) {
+                LOGGER.warn("[exportConfig] skip AI resource config: {}/{}", ci.getGroup(),
+                    ci.getDataId());
+                continue;
+            }
             ConfigMetadata.ConfigExportItem configMetadataItem =
                 new ConfigMetadata.ConfigExportItem();
             configMetadataItem.setAppName(ci.getAppName());
@@ -486,6 +496,11 @@ public class ConfigInnerHandler implements ConfigHandler {
         List<ConfigAllInfo> configInfoList4Clone = new ArrayList<>(queryedDataList.size());
         
         for (ConfigAllInfo ci : queryedDataList) {
+            if (AiResourceGroupType.matches(ci.getGroup(), ci.getDataId())) {
+                LOGGER.warn("[cloneConfig] skip AI resource config: {}/{}", ci.getGroup(),
+                    ci.getDataId());
+                continue;
+            }
             SameNamespaceCloneConfigBean paramBean = configBeansMap.get(ci.getId());
             ConfigAllInfo ci4save = new ConfigAllInfo();
             ci4save.setTenant(namespaceId);
@@ -505,6 +520,10 @@ public class ConfigInnerHandler implements ConfigHandler {
             ci4save.setEncryptedDataKey(
                 ci.getEncryptedDataKey() == null ? StringUtils.EMPTY : ci.getEncryptedDataKey());
             configInfoList4Clone.add(ci4save);
+        }
+        if (configInfoList4Clone.isEmpty()) {
+            failedData.put("succCount", 0);
+            return Result.failure(ErrorCode.DATA_EMPTY, failedData);
         }
         
         final Timestamp time = TimeUtils.getCurrentTime();

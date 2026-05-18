@@ -90,37 +90,37 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ConfigInnerHandlerTest {
-    
+
     @Mock
     private ConfigInfoPersistService configInfoPersistService;
-    
+
     @Mock
     private ConfigOperationService configOperationService;
-    
+
     @Mock
     private ConfigDetailService configDetailService;
-    
+
     @Mock
     private ConfigListenerStateDelegate configListenerStateDelegate;
-    
+
     @Mock
     private ConfigMigrateService configMigrateService;
-    
+
     @Mock
     private NamespacePersistService namespacePersistService;
-    
+
     @Mock
     private ConfigInfoBetaPersistService configInfoBetaPersistService;
-    
+
     @Mock
     private ConfigInfoGrayPersistService configInfoGrayPersistService;
-    
+
     ConfigInnerHandler configInnerHandler;
-    
+
     private boolean cachedGrayCompatibleModel;
-    
+
     private ConfigurableEnvironment cachedEnv;
-    
+
     @BeforeEach
     void setUp() {
         cachedEnv = EnvUtil.getEnvironment();
@@ -131,14 +131,14 @@ class ConfigInnerHandlerTest {
                 configDetailService, namespacePersistService, configInfoBetaPersistService,
                 configInfoGrayPersistService, configListenerStateDelegate, configMigrateService);
     }
-    
+
     @AfterEach
     void tearDown() {
         EnvUtil.setEnvironment(cachedEnv);
         PropertyUtil.setGrayCompatibleModel(cachedGrayCompatibleModel);
         ReflectionTestUtils.setField(configInnerHandler, "oldTableVersion", false);
     }
-    
+
     @Test
     void getConfigList() throws ServletException, IOException, NacosException {
         Page<ConfigInfo> mockPage = new Page<>();
@@ -162,7 +162,7 @@ class ConfigInnerHandlerTest {
         assertEquals(mockPage.getPageItems().get(0).getTenant(),
             actual.getPageItems().get(0).getNamespaceId());
     }
-    
+
     @Test
     void getConfigDetail() throws NacosException {
         ConfigAllInfo mockConfig = mockConfigAllInfo();
@@ -176,19 +176,19 @@ class ConfigInnerHandlerTest {
         assertEquals(mockConfig.getTenant(), actual.getNamespaceId());
         assertEquals(mockConfig.getContent(), actual.getContent());
     }
-    
+
     @Test
     void getConfigDetailNotFound() throws NacosException {
         assertNull(configInnerHandler.getConfigDetail("dataId", "group", "tenant"));
     }
-    
+
     @Test
     void getConfigDetailBlockedForAiResource() throws NacosException {
         // AI resource group/dataId pair must short-circuit to null without touching persistence.
         assertNull(
             configInnerHandler.getConfigDetail("SKILL.md", "skill_enc.6d79__enc.312e", "public"));
     }
-    
+
     @Test
     void publishConfig() throws NacosException {
         ConfigForm configForm = new ConfigForm();
@@ -200,7 +200,7 @@ class ConfigInnerHandlerTest {
             .thenReturn(true);
         assertTrue(configInnerHandler.publishConfig(configForm, configRequestInfo));
     }
-    
+
     @Test
     void deleteConfig() throws NacosException {
         when(configOperationService.deleteConfig("dataId", "group", "tenant", "", "clientIp",
@@ -209,7 +209,7 @@ class ConfigInnerHandlerTest {
         assertTrue(configInnerHandler.deleteConfig("dataId", "group", "tenant", "", "clientIp",
             "srcUser"));
     }
-    
+
     @Test
     void batchDeleteConfigs() {
         when(configInfoPersistService.findConfigInfo(1L)).thenReturn(mockConfigInfo());
@@ -218,7 +218,18 @@ class ConfigInnerHandlerTest {
             anyString(),
             anyString(), anyString());
     }
-    
+
+    @Test
+    void batchDeleteConfigsSkipsAiResource() {
+        ConfigInfo aiConfig = mockConfigInfo();
+        aiConfig.setDataId("SKILL.md");
+        aiConfig.setGroup("skill_enc.6d79__enc.312e");
+        when(configInfoPersistService.findConfigInfo(1L)).thenReturn(aiConfig);
+        assertTrue(configInnerHandler.batchDeleteConfigs(List.of(1L), "clientIp", "srcUser"));
+        verify(configOperationService, never()).deleteConfig(anyString(), anyString(), anyString(),
+            any(), anyString(), anyString(), anyString());
+    }
+
     @Test
     void getConfigListByContent() throws NacosException {
         Page<ConfigInfo> mockPage = new Page<>();
@@ -242,7 +253,7 @@ class ConfigInnerHandlerTest {
         assertEquals(mockPage.getPageItems().get(0).getTenant(),
             actual.getPageItems().get(0).getNamespaceId());
     }
-    
+
     @Test
     void getConfigListByContentWithException() throws NacosException {
         when(configDetailService.findConfigInfoPage("blur", 1, 10, "dataId", "group", "tenant",
@@ -252,7 +263,7 @@ class ConfigInnerHandlerTest {
                 "tenant",
                 new HashMap<>()));
     }
-    
+
     @Test
     void getListeners() throws Exception {
         ConfigListenerInfo mock = new ConfigListenerInfo();
@@ -260,7 +271,7 @@ class ConfigInnerHandlerTest {
             .thenReturn(mock);
         assertEquals(mock, configInnerHandler.getListeners("dataId", "group", "tenant", true));
     }
-    
+
     @Test
     void getAllSubClientConfigByIpEmpty() {
         ConfigListenerInfo mock = new ConfigListenerInfo();
@@ -268,7 +279,7 @@ class ConfigInnerHandlerTest {
         assertEquals(mock,
             configInnerHandler.getAllSubClientConfigByIp("127.0.0.1", true, "tenant", true));
     }
-    
+
     @Test
     void getAllSubClientConfigByIpWithAll() {
         ConfigListenerInfo mock = new ConfigListenerInfo();
@@ -284,7 +295,7 @@ class ConfigInnerHandlerTest {
         assertEquals("1", actual.getListenersStatus().get("dataId+group+tenant"));
         assertEquals("2", actual.getListenersStatus().get("dataId+group+aaa"));
     }
-    
+
     @Test
     void getAllSubClientConfigByIpWithoutAllEmptyNamespace() {
         ConfigListenerInfo mock = new ConfigListenerInfo();
@@ -299,7 +310,7 @@ class ConfigInnerHandlerTest {
         assertEquals(1, actual.getListenersStatus().size());
         assertEquals("1", actual.getListenersStatus().get("dataId+group"));
     }
-    
+
     @Test
     void getAllSubClientConfigByIpWithoutAllTargetNamespace() {
         final ConfigListenerInfo mock = new ConfigListenerInfo();
@@ -316,7 +327,7 @@ class ConfigInnerHandlerTest {
         assertEquals("1", actual.getListenersStatus().get("dataId+group"));
         assertEquals("2", actual.getListenersStatus().get("dataId+group+aaa"));
     }
-    
+
     @Test
     void exportConfig() throws Exception {
         List<ConfigAllInfo> mockList = Collections.singletonList(mockConfigAllInfo());
@@ -330,7 +341,23 @@ class ConfigInnerHandlerTest {
         assertEquals(HttpStatus.OK, actual.getStatusCode());
         assertTrue(actual.getHeaders().containsKey("Content-Disposition"));
     }
-    
+
+    @Test
+    void exportConfigSkipsAiResource() throws Exception {
+        ConfigAllInfo aiConfig = mockConfigAllInfo();
+        aiConfig.setDataId("SKILL.md");
+        aiConfig.setGroup("skill_enc.6d79__enc.312e");
+        when(configInfoPersistService.findAllConfigInfo4Export(any(), any(), any(), any(), any()))
+            .thenReturn(Collections.singletonList(aiConfig));
+        ResponseEntity<byte[]> actual =
+            configInnerHandler.exportConfig("any", "any", "any", "any",
+                Collections.singletonList(1L));
+        assertEquals(HttpStatus.OK, actual.getStatusCode());
+        // AI config filtered out: no config item is packaged into the zip.
+        ZipUtils.UnZipResult unzipped = ZipUtils.unzip(actual.getBody());
+        assertTrue(unzipped.getZipItemList() == null || unzipped.getZipItemList().isEmpty());
+    }
+
     @Test
     void importAndPublishConfigWithEmptyFile() throws NacosException {
         Result<Map<String, Object>> actual =
@@ -338,7 +365,7 @@ class ConfigInnerHandlerTest {
                 SameConfigPolicy.OVERWRITE, null, "srcIp", "requestIpApp");
         assertEquals(ErrorCode.DATA_EMPTY.getCode(), actual.getCode());
     }
-    
+
     @Test
     void importAndPublishConfigWithNonExistNamespace() throws NacosException {
         MultipartFile mockFile = Mockito.mock(MultipartFile.class);
@@ -347,7 +374,7 @@ class ConfigInnerHandlerTest {
                 SameConfigPolicy.OVERWRITE, mockFile, "srcIp", "requestIpApp");
         assertEquals(ErrorCode.NAMESPACE_NOT_EXIST.getCode(), actual.getCode());
     }
-    
+
     @Test
     void importAndPublishConfigWithUnzipException() throws NacosException, IOException {
         MultipartFile mockFile = Mockito.mock(MultipartFile.class);
@@ -357,7 +384,7 @@ class ConfigInnerHandlerTest {
                 SameConfigPolicy.OVERWRITE, mockFile, "srcIp", "requestIpApp");
         assertEquals(ErrorCode.PARSING_DATA_FAILED.getCode(), actual.getCode());
     }
-    
+
     @Test
     void importAndPublishConfigWithoutMetadata() throws NacosException {
         ZipUtils.UnZipResult unziped = mockZipFile(false, true, false, false);
@@ -372,7 +399,7 @@ class ConfigInnerHandlerTest {
             assertEquals(ErrorCode.METADATA_ILLEGAL.getCode(), actual.getCode());
         }
     }
-    
+
     @Test
     void importAndPublishConfigWithNullMetadataItem() throws NacosException {
         ZipUtils.UnZipResult unziped = new ZipUtils.UnZipResult(new ArrayList<>(), null);
@@ -387,7 +414,7 @@ class ConfigInnerHandlerTest {
             assertEquals(ErrorCode.METADATA_ILLEGAL.getCode(), actual.getCode());
         }
     }
-    
+
     @Test
     void importAndPublishConfigWithWrongMetadata() throws NacosException {
         ZipUtils.UnZipResult unziped = mockZipFile(true, false, false, false);
@@ -402,7 +429,7 @@ class ConfigInnerHandlerTest {
             assertEquals(ErrorCode.METADATA_ILLEGAL.getCode(), actual.getCode());
         }
     }
-    
+
     @Test
     void importAndPublishConfigWithEmptyData() throws NacosException {
         ZipUtils.UnZipResult unziped = mockZipFile(true, true, false, true);
@@ -417,7 +444,7 @@ class ConfigInnerHandlerTest {
             assertEquals(ErrorCode.DATA_EMPTY.getCode(), actual.getCode());
         }
     }
-    
+
     @Test
     void importAndPublishConfig() throws NacosException {
         ZipUtils.UnZipResult unziped = mockZipFile(true, true, false, false);
@@ -436,7 +463,7 @@ class ConfigInnerHandlerTest {
             assertTrue(actual.getData().containsKey("dataId23456.json+group132"));
         }
     }
-    
+
     @Test
     void importAndPublishConfigWithUnrecognizedItem() throws NacosException {
         ZipUtils.UnZipResult unziped = mockZipFile(true, true, true, false);
@@ -458,7 +485,7 @@ class ConfigInnerHandlerTest {
             assertEquals(3, actual.getData().get("unrecognizedCount"));
         }
     }
-    
+
     private ZipUtils.UnZipResult mockZipFile(boolean containsMetadata, boolean correctMetadata,
         boolean withUnrecognizedItem, boolean emptyZip) {
         List<ZipUtils.ZipItem> zipItems = new ArrayList<>();
@@ -500,14 +527,14 @@ class ConfigInnerHandlerTest {
             new ZipUtils.ZipItem(Constants.CONFIG_EXPORT_METADATA_NEW,
                 YamlParserUtil.dumpObject(configMetadata)));
     }
-    
+
     @Test
     void cloneConfigWithNoSelectedConfig() throws NacosException {
         Result<Map<String, Object>> actual = configInnerHandler.cloneConfig("srcUser", "public",
             Collections.emptyList(), SameConfigPolicy.OVERWRITE, "srcIp", "requestIpApp");
         assertEquals(ErrorCode.NO_SELECTED_CONFIG.getCode(), actual.getCode());
     }
-    
+
     @Test
     void cloneConfigWithNamespaceNotExist() throws NacosException {
         SameNamespaceCloneConfigBean configBean = new SameNamespaceCloneConfigBean();
@@ -516,7 +543,7 @@ class ConfigInnerHandlerTest {
             "requestIpApp");
         assertEquals(ErrorCode.NAMESPACE_NOT_EXIST.getCode(), actual.getCode());
     }
-    
+
     @Test
     void cloneConfigWithDataEmpty() throws NacosException {
         SameNamespaceCloneConfigBean configBean = new SameNamespaceCloneConfigBean();
@@ -527,7 +554,7 @@ class ConfigInnerHandlerTest {
             "requestIpApp");
         assertEquals(ErrorCode.DATA_EMPTY.getCode(), actual.getCode());
     }
-    
+
     @Test
     void cloneConfig() throws NacosException {
         List<SameNamespaceCloneConfigBean> configBeansList = new ArrayList<>();
@@ -549,7 +576,27 @@ class ConfigInnerHandlerTest {
         assertEquals(ErrorCode.SUCCESS.getCode(), actual.getCode());
         assertEquals(1, actual.getData().size());
     }
-    
+
+    @Test
+    void cloneConfigSkipsAiResourceAndReturnsDataEmpty() throws NacosException {
+        List<SameNamespaceCloneConfigBean> configBeansList = new ArrayList<>();
+        SameNamespaceCloneConfigBean configBean = new SameNamespaceCloneConfigBean();
+        configBean.setCfgId(1L);
+        configBeansList.add(configBean);
+        ConfigAllInfo aiConfig = mockConfigAllInfo();
+        aiConfig.setDataId("SKILL.md");
+        aiConfig.setGroup("skill_enc.6d79__enc.312e");
+        when(configInfoPersistService.findAllConfigInfo4Export(isNull(), isNull(), isNull(),
+            isNull(), anyList()))
+            .thenReturn(Collections.singletonList(aiConfig));
+        Result<Map<String, Object>> actual =
+            configInnerHandler.cloneConfig("srcUser", "public", configBeansList,
+                SameConfigPolicy.OVERWRITE, "srcIp", "requestIpApp");
+        assertEquals(ErrorCode.DATA_EMPTY.getCode(), actual.getCode());
+        verify(configInfoPersistService, never()).batchInsertOrUpdate(any(), any(), any(), any(),
+            any());
+    }
+
     @Test
     void removeBetaConfigWithGrayCompatibleModelAndOldTableVersion() {
         PropertyUtil.setGrayCompatibleModel(true);
@@ -565,7 +612,7 @@ class ConfigInnerHandlerTest {
             "remoteIp", "srcUser");
         verify(configInfoBetaPersistService).removeConfigInfo4Beta("dataId", "group", "tenant");
     }
-    
+
     @Test
     void removeBetaConfigWithGrayCompatibleModelAndLatestTableVersion() {
         PropertyUtil.setGrayCompatibleModel(true);
@@ -582,7 +629,7 @@ class ConfigInnerHandlerTest {
         verify(configInfoBetaPersistService, never()).removeConfigInfo4Beta("dataId", "group",
             "tenant");
     }
-    
+
     @Test
     void removeBetaConfigWithoutGrayCompatibleModel() {
         PropertyUtil.setGrayCompatibleModel(false);
@@ -598,7 +645,7 @@ class ConfigInnerHandlerTest {
         verify(configInfoBetaPersistService, never()).removeConfigInfo4Beta("dataId", "group",
             "tenant");
     }
-    
+
     @Test
     void removeBetaConfigWithException() {
         doThrow(new NacosRuntimeException(0, "test")).when(configInfoGrayPersistService)
@@ -608,12 +655,12 @@ class ConfigInnerHandlerTest {
             "requestIpApp",
             "srcUser"));
     }
-    
+
     @Test
     void queryBetaConfigNonExist() throws NacosException {
         assertNull(configInnerHandler.queryBetaConfig("dataId", "group", "tenant"));
     }
-    
+
     @Test
     void queryBetaConfigExist() throws NacosException {
         ConfigInfoGrayWrapper mockConfigInfo = new ConfigInfoGrayWrapper();
@@ -632,7 +679,7 @@ class ConfigInnerHandlerTest {
                 mockConfigInfo);
         assertNotNull(configInnerHandler.queryBetaConfig("dataId", "group", "tenant"));
     }
-    
+
     @Test
     void queryBetaConfigWithTypeFieldFromProductionConfig() throws NacosException {
         ConfigInfoGrayWrapper mockBetaConfigInfo = new ConfigInfoGrayWrapper();
@@ -649,7 +696,7 @@ class ConfigInnerHandlerTest {
         when(configInfoGrayPersistService.findConfigInfo4Gray("dataId", "group", "tenant", "beta"))
             .thenReturn(
                 mockBetaConfigInfo);
-        
+
         ConfigInfoWrapper mockConfigInfo = new ConfigInfoWrapper();
         mockConfigInfo.setId(1L);
         mockConfigInfo.setDataId("dataId");
@@ -662,12 +709,12 @@ class ConfigInnerHandlerTest {
         mockConfigInfo.setEncryptedDataKey("");
         when(configInfoPersistService.findConfigInfo("dataId", "group", "tenant")).thenReturn(
             mockConfigInfo);
-        
+
         ConfigGrayInfo grayInfo = configInnerHandler.queryBetaConfig("dataId", "group", "tenant");
         assertNotNull(grayInfo);
         assertEquals("type", grayInfo.getType());
     }
-    
+
     private ConfigInfo mockConfigInfo() {
         ConfigInfo configInfo = new ConfigInfo();
         configInfo.setId(1L);
@@ -681,7 +728,7 @@ class ConfigInnerHandlerTest {
         configInfo.setEncryptedDataKey("");
         return configInfo;
     }
-    
+
     private ConfigAllInfo mockConfigAllInfo() {
         ConfigAllInfo configAllInfo = new ConfigAllInfo();
         configAllInfo.setId(1L);
