@@ -70,7 +70,7 @@ public class McpResourceOperationService {
         String resourceDescriptionRef) {
         ConfigQueryChainRequest request =
             buildQueryMcpResourceRequest(namespaceId, resourceDescriptionRef);
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         if (ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND == response.getStatus()) {
             return null;
         }

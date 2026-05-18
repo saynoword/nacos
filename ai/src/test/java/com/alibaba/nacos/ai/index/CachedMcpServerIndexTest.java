@@ -111,7 +111,7 @@ class CachedMcpServerIndexTest {
         
         // 验证缓存被调用，数据库查询没有被调用
         verify(cacheIndex).getMcpServerById(mcpId);
-        verify(configQueryChainService, never()).handle(any());
+        verify(configQueryChainService, never()).handleInternal(any());
     }
     
     @Test
@@ -126,7 +126,7 @@ class CachedMcpServerIndexTest {
         ConfigQueryChainResponse mockResponse = mock(ConfigQueryChainResponse.class);
         when(mockResponse.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(mockResponse);
         
         // 模拟命名空间列表
@@ -147,7 +147,7 @@ class CachedMcpServerIndexTest {
         
         // 验证缓存被调用，数据库查询也被调用
         verify(cacheIndex).getMcpServerById(mcpId);
-        verify(configQueryChainService).handle(any(ConfigQueryChainRequest.class));
+        verify(configQueryChainService).handleInternal(any(ConfigQueryChainRequest.class));
         
         // 验证缓存被更新
         verify(cacheIndex).updateIndex(eq(namespaceId), eq(mcpId), eq(mcpId));
@@ -281,7 +281,7 @@ class CachedMcpServerIndexTest {
         ConfigQueryChainResponse mockResponse = mock(ConfigQueryChainResponse.class);
         when(mockResponse.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(mockResponse);
         
         // 模拟命名空间列表
@@ -305,7 +305,7 @@ class CachedMcpServerIndexTest {
         verify(cacheIndex, never()).updateIndex(anyString(), anyString(), anyString());
         
         // 验证数据库查询被调用
-        verify(configQueryChainService).handle(any(ConfigQueryChainRequest.class));
+        verify(configQueryChainService).handleInternal(any(ConfigQueryChainRequest.class));
     }
     
     @Test
@@ -478,7 +478,7 @@ class CachedMcpServerIndexTest {
         ConfigQueryChainResponse mockResponse = mock(ConfigQueryChainResponse.class);
         when(mockResponse.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(mockResponse);
         
         // 模拟命名空间列表
@@ -500,7 +500,7 @@ class CachedMcpServerIndexTest {
         verify(cacheIndex, never()).updateIndex(anyString(), anyString(), anyString());
         
         // 验证数据库查询被调用
-        verify(configQueryChainService).handle(any(ConfigQueryChainRequest.class));
+        verify(configQueryChainService).handleInternal(any(ConfigQueryChainRequest.class));
     }
     
     @Test
@@ -514,7 +514,7 @@ class CachedMcpServerIndexTest {
         ConfigQueryChainResponse mockResponse = mock(ConfigQueryChainResponse.class);
         when(mockResponse.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(mockResponse);
         
         // 模拟命名空间列表
@@ -533,7 +533,7 @@ class CachedMcpServerIndexTest {
         
         // 验证缓存被调用，数据库查询也被调用
         verify(cacheIndex).getMcpServerById(mcpId);
-        verify(configQueryChainService).handle(any(ConfigQueryChainRequest.class));
+        verify(configQueryChainService).handleInternal(any(ConfigQueryChainRequest.class));
         
         // 验证缓存未被更新（因为未找到）
         verify(cacheIndex, never()).updateIndex(anyString(), anyString(), anyString());
@@ -846,7 +846,7 @@ class CachedMcpServerIndexTest {
         ConfigQueryChainResponse mockResponse = mock(ConfigQueryChainResponse.class);
         when(mockResponse.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(mockResponse);
         
         // 执行查询

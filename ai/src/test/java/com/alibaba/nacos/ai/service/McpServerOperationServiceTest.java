@@ -124,7 +124,7 @@ class McpServerOperationServiceTest {
             null,
             Constants.MCP_LIST_SEARCH_ACCURATE, 1, 100)).thenReturn(mockIndexData);
         ConfigQueryChainResponse mockResponse = mockConfigQueryChainResponse(mockMcpServer);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(mockResponse);
         Page<McpServerBasicInfo> result = serverOperationService.listMcpServerWithPage(
             AiConstants.Mcp.MCP_DEFAULT_NAMESPACE, null, Constants.MCP_LIST_SEARCH_ACCURATE, 1,
@@ -164,7 +164,7 @@ class McpServerOperationServiceTest {
             mockConfigQueryChainResponse(mockServerVersionInfo(id));
         ConfigQueryChainResponse storageDataResponse = mockConfigQueryChainResponse(
             mockStorageInfo(id, true, true, AiConstants.Mcp.MCP_PROTOCOL_STDIO));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         when(toolOperationService.getMcpTool(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE,
@@ -192,7 +192,7 @@ class McpServerOperationServiceTest {
         storageInfo
             .setResourceDescriptionRef(McpConfigUtils.formatServerResourceSpecDataId(id, "9.9.9"));
         ConfigQueryChainResponse storageDataResponse = mockConfigQueryChainResponse(storageInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         when(resourceOperationService.getMcpResource(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE,
@@ -221,7 +221,7 @@ class McpServerOperationServiceTest {
         mockStorageInfo.setRemoteServerConfig(remoteServiceConfig);
         ConfigQueryChainResponse storageDataResponse =
             mockConfigQueryChainResponse(mockStorageInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         Instance instance = new Instance();
@@ -262,7 +262,7 @@ class McpServerOperationServiceTest {
         mockStorageInfo.setRemoteServerConfig(remoteServiceConfig);
         ConfigQueryChainResponse storageDataResponse =
             mockConfigQueryChainResponse(mockStorageInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         Instance instance = new Instance();
@@ -312,7 +312,7 @@ class McpServerOperationServiceTest {
         mockStorageInfo.setRemoteServerConfig(remoteServiceConfig);
         ConfigQueryChainResponse storageDataResponse =
             mockConfigQueryChainResponse(mockStorageInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         Instance instance = new Instance();
@@ -360,7 +360,7 @@ class McpServerOperationServiceTest {
         mockStorageInfo.setRemoteServerConfig(remoteServiceConfig);
         ConfigQueryChainResponse storageDataResponse =
             mockConfigQueryChainResponse(mockStorageInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         when(endpointOperationService.getMcpServerEndpointInstances(isNull())).thenReturn(
@@ -402,7 +402,7 @@ class McpServerOperationServiceTest {
         mockStorageInfo.setRemoteServerConfig(remoteServiceConfig);
         ConfigQueryChainResponse storageDataResponse =
             mockConfigQueryChainResponse(mockStorageInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         when(endpointOperationService.getMcpServerEndpointInstances(isNull())).thenReturn(
@@ -444,7 +444,7 @@ class McpServerOperationServiceTest {
         mockStorageInfo.setRemoteServerConfig(remoteServiceConfig);
         ConfigQueryChainResponse storageDataResponse =
             mockConfigQueryChainResponse(mockStorageInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         when(endpointOperationService.getMcpServerEndpointInstances(isNull())).thenReturn(
@@ -491,7 +491,7 @@ class McpServerOperationServiceTest {
         mockStorageInfo.setRemoteServerConfig(remoteServiceConfig);
         ConfigQueryChainResponse storageDataResponse =
             mockConfigQueryChainResponse(mockStorageInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         Instance instance = new Instance();
@@ -522,7 +522,7 @@ class McpServerOperationServiceTest {
     @Test
     void getMcpServerDetailByIdNotFoundWithNamespace() throws NacosException {
         String id = mockId();
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             mockConfigQueryChainResponse(null));
         assertThrows(NacosApiException.class,
             () -> serverOperationService.getMcpServerDetail(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE,
@@ -536,7 +536,7 @@ class McpServerOperationServiceTest {
             mockConfigQueryChainResponse(mockServerVersionInfo(id));
         ConfigQueryChainResponse storageDataResponse = mockConfigQueryChainResponse(
             mockStorageInfo(id, true, false, AiConstants.Mcp.MCP_PROTOCOL_STDIO));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         McpServerDetailInfo actual =
@@ -556,7 +556,7 @@ class McpServerOperationServiceTest {
         ConfigQueryChainResponse versionDataResponse =
             mockConfigQueryChainResponse(mockServerVersionInfo(id));
         ConfigQueryChainResponse storageDataResponse = mockConfigQueryChainResponse(null);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         assertThrows(NacosApiException.class,
@@ -572,7 +572,7 @@ class McpServerOperationServiceTest {
             mockConfigQueryChainResponse(mockServerVersionInfo(id));
         ConfigQueryChainResponse storageDataResponse = mockConfigQueryChainResponse(
             mockStorageInfo(id, false, false, AiConstants.Mcp.MCP_PROTOCOL_STDIO));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         McpServerDetailInfo actual =
@@ -588,7 +588,7 @@ class McpServerOperationServiceTest {
     
     @Test
     void getMcpServerDetailByNameNotFound() throws NacosException {
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             mockConfigQueryChainResponse(null));
         assertThrows(NacosApiException.class,
             () -> serverOperationService.getMcpServerDetail(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE,
@@ -606,7 +606,7 @@ class McpServerOperationServiceTest {
             mockConfigQueryChainResponse(mockServerVersionInfo(id));
         ConfigQueryChainResponse storageDataResponse = mockConfigQueryChainResponse(
             mockStorageInfo(id, true, false, AiConstants.Mcp.MCP_PROTOCOL_STDIO));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             versionDataResponse,
             storageDataResponse);
         McpServerDetailInfo actual =
@@ -869,7 +869,7 @@ class McpServerOperationServiceTest {
         mockServerBasicInfo.setVersionDetail(null);
         mockServerBasicInfo.setVersion("1.0.0");
         ConfigQueryChainResponse response = mockConfigQueryChainResponse(mockServerBasicInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         serverOperationService.updateMcpServer(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE, true,
             mockServerBasicInfo, null,
@@ -890,7 +890,7 @@ class McpServerOperationServiceTest {
         mockServerBasicInfo.setVersionDetail(mockVersion("9.9.9"));
         mockServerBasicInfo.setVersion(null);
         ConfigQueryChainResponse response = mockConfigQueryChainResponse(mockServerBasicInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         serverOperationService.updateMcpServer(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE, true,
             mockServerBasicInfo, null,
@@ -911,7 +911,7 @@ class McpServerOperationServiceTest {
         mockServerBasicInfo.setVersionDetail(mockVersion("1.0.1"));
         mockServerBasicInfo.setVersion(null);
         ConfigQueryChainResponse response = mockConfigQueryChainResponse(mockServerBasicInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         serverOperationService.updateMcpServer(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE, true,
             mockServerBasicInfo, null,
@@ -943,7 +943,7 @@ class McpServerOperationServiceTest {
                 mockIndexData(id).getPageItems().get(0));
         mockServerBasicInfo.setVersionDetail(mockVersion("9.9.9"));
         ConfigQueryChainResponse response = mockConfigQueryChainResponse(mockServerBasicInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         serverOperationService.updateMcpServer(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE, true,
             mockServerBasicInfo, null,
@@ -961,7 +961,7 @@ class McpServerOperationServiceTest {
         String id = mockId();
         McpServerVersionInfo existing = mockServerVersionInfo(id);
         ConfigQueryChainResponse response = mockConfigQueryChainResponse(existing);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         McpServerVersionInfo updateSpec = mockServerVersionInfo(id);
@@ -992,7 +992,7 @@ class McpServerOperationServiceTest {
     @Test
     void deleteMcpServerByIdNotFound() {
         String id = mockId();
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             mockConfigQueryChainResponse(null));
         assertThrows(NacosApiException.class,
             () -> serverOperationService.deleteMcpServer(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE,
@@ -1002,7 +1002,7 @@ class McpServerOperationServiceTest {
     @Test
     void deleteMcpServerById() throws NacosException {
         String id = mockId();
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             mockConfigQueryChainResponse(mockServerVersionInfo(id)));
         serverOperationService.deleteMcpServer(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE, null, id,
             null);
@@ -1045,7 +1045,7 @@ class McpServerOperationServiceTest {
         when(mcpServerIndex.getMcpServerByName(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE, "mcpName"))
             .thenReturn(
                 mockIndexData(id).getPageItems().get(0));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             mockConfigQueryChainResponse(mockServerBasicInfo));
         serverOperationService.deleteMcpServer(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE, "mcpName",
             null, null);
@@ -1084,7 +1084,7 @@ class McpServerOperationServiceTest {
     @Test
     void deleteMcpServerForTargetVersion() throws NacosException {
         String id = mockId();
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             mockConfigQueryChainResponse(mockServerVersionInfo(id)));
         serverOperationService.deleteMcpServer(AiConstants.Mcp.MCP_DEFAULT_NAMESPACE, null, id,
             "1.0.0");

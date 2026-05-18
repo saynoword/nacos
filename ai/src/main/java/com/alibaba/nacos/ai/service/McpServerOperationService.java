@@ -142,7 +142,8 @@ public class McpServerOperationService {
                 .map((index) -> {
                     ConfigQueryChainRequest request = buildQueryMcpServerVersionInfoRequest(
                         index.getNamespaceId(), index.getId());
-                    ConfigQueryChainResponse response = configQueryChainService.handle(request);
+                    ConfigQueryChainResponse response =
+                        configQueryChainService.handleInternal(request);
                     McpServerBasicInfo basicInfo =
                         transferToMcpServerVersionInfo(response.getContent());
                     basicInfo.setNamespaceId(index.getNamespaceId());
@@ -186,7 +187,7 @@ public class McpServerOperationService {
         
         ConfigQueryChainRequest request =
             buildQueryMcpServerRequest(namespaceId, mcpServerId, version);
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         if (McpConfigUtils.isConfigNotFound(response.getStatus())) {
             throw new NacosApiException(NacosApiException.NOT_FOUND,
                 ErrorCode.MCP_SEVER_VERSION_NOT_FOUND,
@@ -235,7 +236,7 @@ public class McpServerOperationService {
         throws NacosApiException {
         ConfigQueryChainRequest request =
             buildQueryMcpServerVersionInfoRequest(namespaceId, mcpServerId);
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         if (McpConfigUtils.isConfigNotFound(response.getStatus())) {
             throw new NacosApiException(NacosApiException.NOT_FOUND, ErrorCode.MCP_SERVER_NOT_FOUND,
                 String.format("Mcp server [ID: %s] not found in namespace [%s]. Response: %s",
@@ -697,7 +698,7 @@ public class McpServerOperationService {
         String mcpServerId, String version) {
         ConfigQueryChainRequest request =
             buildQueryMcpServerRequest(namespaceId, mcpServerId, version);
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         if (McpConfigUtils.isConfigNotFound(response.getStatus())) {
             return null;
         }

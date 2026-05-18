@@ -73,7 +73,7 @@ public class SkillIndexManifestService {
         try {
             ConfigQueryChainRequest request = ConfigQueryChainRequest.buildConfigQueryChainRequest(
                 SkillUtils.SKILL_INDEX_DATA_ID, SkillUtils.buildSkillGroup(skillName), namespaceId);
-            ConfigQueryChainResponse response = configQueryChainService.handle(request);
+            ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
             if (response.getStatus() == ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND
                 || response.getContent() == null) {
                 return null;

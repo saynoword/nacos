@@ -159,7 +159,7 @@ public class CachedMcpServerIndex extends AbstractMcpServerIndex {
         List<String> namespaceList = fetchOrderedNamespaceList();
         for (String namespaceId : namespaceList) {
             request.setTenant(namespaceId);
-            ConfigQueryChainResponse response = configQueryChainService.handle(request);
+            ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
             if (response
                 .getStatus() == ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL) {
                 McpServerIndexData result = new McpServerIndexData();

@@ -70,7 +70,7 @@ public class PlainMcpServerIndex extends AbstractMcpServerIndex {
     
     public McpServerIndexData getMcpServerById(String namespaceId, String id) {
         ConfigQueryChainRequest request = buildConfigQueryChainRequest(namespaceId, id);
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         if (McpConfigUtils.isConfigFound(response.getStatus())) {
             return McpServerIndexData.newIndexData(id, namespaceId);
         }

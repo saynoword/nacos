@@ -364,7 +364,7 @@ public class AgentSpecDataBootstrapInitializer
         try {
             ConfigQueryChainRequest request = ConfigQueryChainRequest.buildConfigQueryChainRequest(
                 BOOTSTRAP_MARKER_DATA_ID, BOOTSTRAP_MARKER_GROUP, Constants.DEFAULT_NAMESPACE_ID);
-            ConfigQueryChainResponse response = configQueryChainService.handle(request);
+            ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
             if (response.getStatus() == ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND
                 || StringUtils.isBlank(response.getContent())) {
                 return false;

@@ -20,6 +20,7 @@ import com.alibaba.nacos.config.server.service.query.handler.ConfigChainEntryHan
 import com.alibaba.nacos.config.server.service.query.handler.ConfigContentTypeHandler;
 import com.alibaba.nacos.config.server.service.query.handler.FormalHandler;
 import com.alibaba.nacos.config.server.service.query.handler.GrayRuleMatchHandler;
+import com.alibaba.nacos.config.server.service.query.handler.ResourceVisibilityHandler;
 import com.alibaba.nacos.config.server.service.query.handler.SpecialTagNotFoundHandler;
 
 /**
@@ -32,16 +33,28 @@ public class DefaultConfigQueryHandlerChainBuilder implements ConfigQueryHandler
     @Override
     public ConfigQueryHandlerChain build() {
         ConfigQueryHandlerChain chain = new ConfigQueryHandlerChain();
-        chain.addHandler(new ConfigChainEntryHandler())
-            .addHandler(new ConfigContentTypeHandler())
-            .addHandler(new GrayRuleMatchHandler())
-            .addHandler(new SpecialTagNotFoundHandler())
-            .addHandler(new FormalHandler());
+        appendCoreHandlers(chain);
+        return chain;
+    }
+    
+    @Override
+    public ConfigQueryHandlerChain buildForExternal() {
+        ConfigQueryHandlerChain chain = new ConfigQueryHandlerChain();
+        chain.addHandler(new ResourceVisibilityHandler());
+        appendCoreHandlers(chain);
         return chain;
     }
     
     @Override
     public String getName() {
         return "nacos";
+    }
+    
+    private void appendCoreHandlers(ConfigQueryHandlerChain chain) {
+        chain.addHandler(new ConfigChainEntryHandler())
+            .addHandler(new ConfigContentTypeHandler())
+            .addHandler(new GrayRuleMatchHandler())
+            .addHandler(new SpecialTagNotFoundHandler())
+            .addHandler(new FormalHandler());
     }
 }

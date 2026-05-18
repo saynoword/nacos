@@ -84,7 +84,7 @@ class SkillIndexManifestServiceTest {
         ConfigQueryChainResponse response = new ConfigQueryChainResponse();
         response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         response.setContent(JacksonUtils.toJson(manifest));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         SkillIndexManifest result = manifestService.query(NAMESPACE_ID, SKILL_NAME);
@@ -98,7 +98,7 @@ class SkillIndexManifestServiceTest {
     void testQueryReturnsNullWhenNotFound() throws NacosException {
         ConfigQueryChainResponse response = new ConfigQueryChainResponse();
         response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         SkillIndexManifest result = manifestService.query(NAMESPACE_ID, SKILL_NAME);
@@ -108,7 +108,7 @@ class SkillIndexManifestServiceTest {
     
     @Test
     void testQueryReturnsNullOnException() throws NacosException {
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenThrow(new RuntimeException("test error"));
         
         SkillIndexManifest result = manifestService.query(NAMESPACE_ID, SKILL_NAME);
@@ -120,7 +120,7 @@ class SkillIndexManifestServiceTest {
     void testLoadForUpdateReturnsNewManifestWhenNull() throws NacosException {
         ConfigQueryChainResponse response = new ConfigQueryChainResponse();
         response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         SkillIndexManifest result = manifestService.loadForUpdate(NAMESPACE_ID, SKILL_NAME);
@@ -136,7 +136,7 @@ class SkillIndexManifestServiceTest {
         ConfigQueryChainResponse response = new ConfigQueryChainResponse();
         response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         response.setContent(JacksonUtils.toJson(manifest));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         SkillIndexManifest result = manifestService.loadForUpdate(NAMESPACE_ID, SKILL_NAME);

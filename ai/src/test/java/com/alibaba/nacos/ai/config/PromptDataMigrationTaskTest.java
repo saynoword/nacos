@@ -220,7 +220,7 @@ class PromptDataMigrationTaskTest {
         ConfigQueryChainResponse mappingResp = new ConfigQueryChainResponse();
         mappingResp.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         mappingResp.setContent(JacksonUtils.toJson(mapping));
-        when(configQueryChainService.handle(any())).thenReturn(mappingResp);
+        when(configQueryChainService.handleInternal(any())).thenReturn(mappingResp);
         Page<AiResourceVersion> versionPage = new Page<>();
         AiResourceVersion existingVersion = new AiResourceVersion();
         existingVersion.setVersion("0.0.1");
@@ -266,7 +266,7 @@ class PromptDataMigrationTaskTest {
         versionContent.setVersion("0.0.1");
         versionContent.setTemplate("Hello {{name}}");
         
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             Object arg = invocation.getArgument(0);
             if (arg instanceof com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest) {
                 com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
@@ -327,7 +327,7 @@ class PromptDataMigrationTaskTest {
             .thenThrow(new ConfigAlreadyExistsException("marker exists"));
         
         // Answer-based mock: return proper data for scan reads, timestamp for marker staleness check
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();
@@ -371,7 +371,7 @@ class PromptDataMigrationTaskTest {
         mapping.versions = Collections.singletonList("0.0.1");
         mapping.latestVersion = "0.0.1";
         
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();
@@ -425,7 +425,7 @@ class PromptDataMigrationTaskTest {
         when(aiResourcePersistService.find(NS, PROMPT_KEY, RESOURCE_TYPE_PROMPT)).thenReturn(null);
         
         // Proper scan mock for descriptor + mapping reads
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();
@@ -469,7 +469,7 @@ class PromptDataMigrationTaskTest {
         mapping.promptKey = PROMPT_KEY;
         mapping.versions = new ArrayList<>();
         
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();
@@ -531,7 +531,7 @@ class PromptDataMigrationTaskTest {
             .thenReturn(null);
         
         // Config reads
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();
@@ -591,7 +591,7 @@ class PromptDataMigrationTaskTest {
             eq(com.alibaba.nacos.api.common.Constants.DEFAULT_NAMESPACE_ID),
             eq(PROMPT_KEY), eq(RESOURCE_TYPE_PROMPT), eq("0.0.1"))).thenReturn(null);
         
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();
@@ -728,7 +728,7 @@ class PromptDataMigrationTaskTest {
         mapping.versions = Arrays.asList("0.0.1", "0.0.2");
         mapping.latestVersion = "0.0.2";
         
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();
@@ -790,7 +790,7 @@ class PromptDataMigrationTaskTest {
         mapping.promptKey = PROMPT_KEY;
         mapping.versions = Arrays.asList("0.0.1", "0.0.2");
         
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();
@@ -843,7 +843,7 @@ class PromptDataMigrationTaskTest {
         descriptor.promptKey = PROMPT_KEY;
         descriptor.description = "test";
         
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();
@@ -919,7 +919,7 @@ class PromptDataMigrationTaskTest {
         
         // Mapping returns empty versions so buildLegacyPromptData returns null — that's fine,
         // we just want to verify pagination works
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             ConfigQueryChainResponse resp = new ConfigQueryChainResponse();
             resp.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
             LegacyLabelVersionMapping mapping = new LegacyLabelVersionMapping();
@@ -1004,7 +1004,7 @@ class PromptDataMigrationTaskTest {
             .thenReturn(true);
         
         // configQueryChainService: return stale timestamp for marker check, proper data for scan
-        when(configQueryChainService.handle(any())).thenAnswer(invocation -> {
+        when(configQueryChainService.handleInternal(any())).thenAnswer(invocation -> {
             com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest req =
                 invocation.getArgument(0);
             String dataId = req.getDataId();

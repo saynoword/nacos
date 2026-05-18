@@ -211,7 +211,7 @@ public class NacosPromptLegacyDataReader implements PromptLegacyDataReader {
             ConfigQueryChainRequest request =
                 ConfigQueryChainRequest.buildConfigQueryChainRequest(dataId,
                     PROMPT_GROUP, namespaceId);
-            ConfigQueryChainResponse response = configQueryChainService.handle(request);
+            ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
             if (response
                 .getStatus() == ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND) {
                 return null;

@@ -434,7 +434,7 @@ public class PromptDataMigrationTask implements ApplicationListener<ApplicationR
             ConfigQueryChainRequest request = ConfigQueryChainRequest.buildConfigQueryChainRequest(
                 MIGRATION_MARKER_DATA_ID, MIGRATION_MARKER_GROUP,
                 com.alibaba.nacos.api.common.Constants.DEFAULT_NAMESPACE_ID);
-            ConfigQueryChainResponse response = configQueryChainService.handle(request);
+            ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
             if (response.getStatus() == ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND
                 || StringUtils.isBlank(response.getContent())) {
                 return false;

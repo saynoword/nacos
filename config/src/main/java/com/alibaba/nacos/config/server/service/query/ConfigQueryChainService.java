@@ -21,7 +21,6 @@ import com.alibaba.nacos.config.server.exception.NacosConfigException;
 import com.alibaba.nacos.config.server.service.query.enums.ResponseCode;
 import com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainRequest;
 import com.alibaba.nacos.config.server.service.query.model.ConfigQueryChainResponse;
-import com.alibaba.nacos.plugin.datasource.constants.AiResourceGroupType;
 import com.alibaba.nacos.sys.env.EnvUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +38,9 @@ public class ConfigQueryChainService {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigQueryChainService.class);
     
-    private final ConfigQueryHandlerChain chain;
+    private final ConfigQueryHandlerChain externalChain;
+    
+    private final ConfigQueryHandlerChain internalChain;
     
     public ConfigQueryChainService() {
         String curChain = EnvUtil.getProperty("nacos.config.query.chain.builder", "nacos");
@@ -49,7 +50,9 @@ public class ConfigQueryChainService {
                 .filter(builder -> builder.getName().equals(curChain))
                 .findFirst();
         if (optionalBuilder.isPresent()) {
-            chain = optionalBuilder.get().build();
+            ConfigQueryHandlerChainBuilder builder = optionalBuilder.get();
+            externalChain = builder.buildForExternal();
+            internalChain = builder.build();
             LOGGER.info("ConfigQueryHandlerChain has been initialized successfully with chain: {}",
                 curChain);
         } else {
@@ -61,14 +64,16 @@ public class ConfigQueryChainService {
     }
     
     /**
-     * Handles the configuration query request.
+     * Handles a user-facing configuration query request. Goes through the external chain, which
+     * applies visibility filtering (e.g. hides AI resource configs) before falling through to the
+     * core query handlers. This is the default entry point for client / admin / console GET paths.
      *
      * @param request the configuration query request object
      * @return the configuration query response object
      */
     public ConfigQueryChainResponse handle(ConfigQueryChainRequest request) {
         try {
-            return chain.handle(request);
+            return externalChain.handle(request);
         } catch (Exception e) {
             LOGGER.error("[Error] Fail to handle ConfigQueryChainRequest", e);
             return ConfigQueryChainResponse.buildFailResponse(ResponseCode.FAIL.getCode(),
@@ -77,23 +82,23 @@ public class ConfigQueryChainService {
     }
     
     /**
-     * Handles a user-facing configuration query request. Returns {@code CONFIG_NOT_FOUND} for AI
-     * resource configs to keep them hidden from external callers; otherwise delegates to
-     * {@link #handle(ConfigQueryChainRequest)}.
+     * Handles a server-internal configuration query request. Bypasses visibility filtering so
+     * server-side subsystems (AI module bootstrap, migrations, indexes, MCP/A2A/Skill operation
+     * services) can read every config to materialize their domain APIs.
      *
-     * <p>Server-side internal callers (AI module bootstrap, migrations, MCP/A2A/Skill operation
-     * services) must keep using {@link #handle(ConfigQueryChainRequest)} so they can read AI
-     * resources to materialize their domain APIs.
+     * <p>Do NOT call this from any user-facing path. New external endpoints must use
+     * {@link #handle(ConfigQueryChainRequest)}.
      *
      * @param request the configuration query request object
      * @return the configuration query response object
      */
-    public ConfigQueryChainResponse handleForClient(ConfigQueryChainRequest request) {
-        if (AiResourceGroupType.matches(request.getGroup(), request.getDataId())) {
-            ConfigQueryChainResponse response = new ConfigQueryChainResponse();
-            response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-            return response;
+    public ConfigQueryChainResponse handleInternal(ConfigQueryChainRequest request) {
+        try {
+            return internalChain.handle(request);
+        } catch (Exception e) {
+            LOGGER.error("[Error] Fail to handle ConfigQueryChainRequest (internal)", e);
+            return ConfigQueryChainResponse.buildFailResponse(ResponseCode.FAIL.getCode(),
+                e.getMessage());
         }
-        return handle(request);
     }
 }

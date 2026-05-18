@@ -148,7 +148,7 @@ public class ConfigServletInner {
             ConfigChainRequestExtractorService.getExtractor().extract(request);
         chainRequest.setTenant(NamespaceUtil.processNamespaceParameter(chainRequest.getTenant()));
         ConfigQueryChainResponse chainResponse =
-            configQueryChainService.handleForClient(chainRequest);
+            configQueryChainService.handle(chainRequest);
         
         if (ResponseCode.FAIL.getCode() == chainResponse.getResultCode()) {
             throw new NacosConfigException(chainResponse.getMessage());

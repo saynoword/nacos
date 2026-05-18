@@ -187,7 +187,7 @@ class PlainMcpServerIndexTest {
     void getMcpServerByIdNotFound() {
         String id = UUID.randomUUID().toString();
         when(namespaceOperationService.getNamespaceList()).thenReturn(mockNamespaceList(1, false));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             mockConfigQueryChainResponse(null));
         assertNull(plainMcpServerIndex.getMcpServerById(id));
     }
@@ -197,7 +197,7 @@ class PlainMcpServerIndexTest {
         String id = UUID.randomUUID().toString();
         when(namespaceOperationService.getNamespaceList()).thenReturn(mockNamespaceList(1, false));
         McpServerBasicInfo mcpServerBasicInfo = mockServerVersionInfo(id);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class))).thenReturn(
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class))).thenReturn(
             mockConfigQueryChainResponse(mcpServerBasicInfo));
         McpServerIndexData result = plainMcpServerIndex.getMcpServerById(id);
         assertEquals(id, result.getId());

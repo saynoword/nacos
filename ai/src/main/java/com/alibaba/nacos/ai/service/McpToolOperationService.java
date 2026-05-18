@@ -70,7 +70,7 @@ public class McpToolOperationService {
     public McpToolSpecification getMcpTool(String namespaceId, String toolsDescriptionRef) {
         ConfigQueryChainRequest request =
             buildQueryMcpToolRequest(namespaceId, toolsDescriptionRef);
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         if (ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND == response.getStatus()) {
             return null;
         }

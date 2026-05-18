@@ -143,7 +143,7 @@ public class A2aServerOperationService {
         ConfigQueryChainRequest request =
             ConfigQueryChainRequest.buildConfigQueryChainRequest(encodedName, AGENT_GROUP,
                 namespaceId);
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         
         if (response.getStatus() == ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND) {
             return;
@@ -372,7 +372,7 @@ public class A2aServerOperationService {
         ConfigQueryChainRequest request =
             ConfigQueryChainRequest.buildConfigQueryChainRequest(versionDataId,
                 AGENT_VERSION_GROUP, namespaceId);
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         if (response.getStatus() == ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND) {
             throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.AGENT_VERSION_NOT_FOUND,
                 String.format("Agent %s version %s not found.", agentCardVersionInfo.getName(),
@@ -507,7 +507,7 @@ public class A2aServerOperationService {
         ConfigQueryChainRequest request =
             ConfigQueryChainRequest.buildConfigQueryChainRequest(actualDataId,
                 AGENT_GROUP, namespaceId);
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         if (response.getStatus() == ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND) {
             throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.AGENT_NOT_FOUND,
                 "Agent not found: " + name);

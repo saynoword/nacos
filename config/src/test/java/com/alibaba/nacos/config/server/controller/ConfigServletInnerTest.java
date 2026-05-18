@@ -409,8 +409,8 @@ class ConfigServletInnerTest {
     
     @Test
     void testDoGetConfigBlockedForAiResource() throws Exception {
-        // AI resource group/dataId pair should short-circuit to NOT_FOUND via handleForClient,
-        // without touching the cache (no ConfigCacheService stub needed).
+        // AI resource group/dataId pair should short-circuit to NOT_FOUND via the external chain
+        // (ResourceVisibilityHandler), without touching the cache (no ConfigCacheService stub needed).
         String dataId = "SKILL.md";
         String group = "skill_enc.6d79__enc.312e";
         String tenant = "tenant" + System.currentTimeMillis();

@@ -43,13 +43,13 @@ class ConfigQueryChainServiceTest {
     }
     
     @Test
-    void handleForClientReturnsNotFoundForAiResourceGroupOnly() {
+    void handleHidesAiResourceGroupOnly() {
         ConfigQueryChainRequest request = new ConfigQueryChainRequest();
         request.setDataId("SKILL.md");
         request.setGroup("skill_enc.6d79__enc.312e");
         request.setTenant("public");
         
-        ConfigQueryChainResponse response = configQueryChainService.handleForClient(request);
+        ConfigQueryChainResponse response = configQueryChainService.handle(request);
         
         assertEquals(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND,
             response.getStatus());
@@ -57,13 +57,13 @@ class ConfigQueryChainServiceTest {
     }
     
     @Test
-    void handleForClientReturnsNotFoundForAiResourceCompound() {
+    void handleHidesAiResourceCompound() {
         ConfigQueryChainRequest request = new ConfigQueryChainRequest();
         request.setDataId("content.json");
         request.setGroup("prompt__myPrompt");
         request.setTenant("public");
         
-        ConfigQueryChainResponse response = configQueryChainService.handleForClient(request);
+        ConfigQueryChainResponse response = configQueryChainService.handle(request);
         
         assertEquals(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND,
             response.getStatus());

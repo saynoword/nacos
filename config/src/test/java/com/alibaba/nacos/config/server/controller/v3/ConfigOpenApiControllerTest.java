@@ -70,7 +70,7 @@ class ConfigOpenApiControllerTest {
         response.setEncryptedDataKey(null);
         response.setLastModified(System.currentTimeMillis());
         response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
-        when(configQueryChainService.handleForClient(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         ConfigFormV3 configForm = new ConfigFormV3();
         configForm.setDataId("test");
@@ -91,7 +91,7 @@ class ConfigOpenApiControllerTest {
         response.setContent(null);
         response.setEncryptedDataKey(null);
         response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handleForClient(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         ConfigFormV3 configForm = new ConfigFormV3();
         configForm.setDataId("test");
@@ -104,12 +104,13 @@ class ConfigOpenApiControllerTest {
     @Test
     void testGetConfigBlockedForAiResource()
         throws NacosApiException, UnsupportedEncodingException {
-        // Real ConfigQueryChainService (not the mock) would short-circuit AI groups via
-        // handleForClient. We replicate that by stubbing the mock to return CONFIG_NOT_FOUND for
-        // the AI request — the controller should turn it into RESOURCE_NOT_FOUND.
+        // Real ConfigQueryChainService (not the mock) would short-circuit AI groups via the
+        // external chain (ResourceVisibilityHandler). We replicate that by stubbing the mock to
+        // return CONFIG_NOT_FOUND for the AI request — the controller turns it into
+        // RESOURCE_NOT_FOUND.
         ConfigQueryChainResponse response = new ConfigQueryChainResponse();
         response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handleForClient(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         ConfigFormV3 configForm = new ConfigFormV3();
         configForm.setDataId("SKILL.md");
@@ -132,7 +133,7 @@ class ConfigOpenApiControllerTest {
         ConfigGrayPersistInfo grayPersistInfo =
             GrayRuleManager.constructConfigGrayPersistInfo(betaGrayRule);
         response.getMatchedGray().resetGrayRule(JacksonUtils.toJson(grayPersistInfo));
-        when(configQueryChainService.handleForClient(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         ConfigFormV3 configForm = new ConfigFormV3();
         configForm.setDataId("test");
@@ -161,7 +162,7 @@ class ConfigOpenApiControllerTest {
         ConfigGrayPersistInfo grayPersistInfo =
             GrayRuleManager.constructConfigGrayPersistInfo(tagGrayRule);
         response.getMatchedGray().resetGrayRule(JacksonUtils.toJson(grayPersistInfo));
-        when(configQueryChainService.handleForClient(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         ConfigFormV3 configForm = new ConfigFormV3();
         configForm.setDataId("test");

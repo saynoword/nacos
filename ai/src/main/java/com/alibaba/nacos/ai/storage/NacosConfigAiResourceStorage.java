@@ -212,7 +212,7 @@ public class NacosConfigAiResourceStorage implements AiResourceStorage {
         String physicalDataId = NacosAiConfigKeyCodec.encodeSegment(parts.dataId());
         ConfigQueryChainRequest request = ConfigQueryChainRequest.buildConfigQueryChainRequest(
             physicalDataId, parts.group(), parts.namespaceId());
-        ConfigQueryChainResponse response = configQueryChainService.handle(request);
+        ConfigQueryChainResponse response = configQueryChainService.handleInternal(request);
         if (response.getStatus() == ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND) {
             return null;
         }

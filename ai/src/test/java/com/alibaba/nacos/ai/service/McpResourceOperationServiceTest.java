@@ -79,7 +79,7 @@ class McpResourceOperationServiceTest {
         ConfigQueryChainResponse response = new ConfigQueryChainResponse();
         response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         response.setContent(JacksonUtils.toJson(getMcpResourceSpecification()));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         String id = UUID.randomUUID().toString();
         String version = "1.0.0";
@@ -93,7 +93,7 @@ class McpResourceOperationServiceTest {
     void getMcpResourceNotFound() {
         ConfigQueryChainResponse response = new ConfigQueryChainResponse();
         response.setStatus(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         String id = UUID.randomUUID().toString();
         String version = "1.0.0";

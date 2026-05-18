@@ -24,11 +24,22 @@ package com.alibaba.nacos.config.server.service.query;
 public interface ConfigQueryHandlerChainBuilder {
     
     /**
-     * Builds the configuration query handler chain.
+     * Builds the internal configuration query handler chain. The internal chain skips visibility
+     * filtering so server-side callers (e.g. AI module bootstrap, indexes, MCP/A2A/Skill operation
+     * services) can read every config.
      *
-     * @return the configuration query handler chain
+     * @return the internal configuration query handler chain
      */
     ConfigQueryHandlerChain build();
+    
+    /**
+     * Builds the external configuration query handler chain. The external chain prepends visibility
+     * filtering so user-facing callers cannot see configs that are reserved for internal subsystems
+     * (e.g. AI resource configs).
+     *
+     * @return the external configuration query handler chain
+     */
+    ConfigQueryHandlerChain buildForExternal();
     
     /**
      * Gets the name of the builder.

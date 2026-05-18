@@ -132,7 +132,7 @@ public class A2aServerOperationServiceTest {
         ConfigQueryChainResponse response = mock(ConfigQueryChainResponse.class);
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         when(configOperationService.publishConfig(any(ConfigForm.class),
@@ -156,7 +156,7 @@ public class A2aServerOperationServiceTest {
         ConfigQueryChainResponse response = mock(ConfigQueryChainResponse.class);
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         when(configOperationService.publishConfig(any(ConfigForm.class),
@@ -180,7 +180,7 @@ public class A2aServerOperationServiceTest {
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         when(response.getContent()).thenReturn(JacksonUtils.toJson(versionInfo));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         when(configOperationService.deleteConfig(eq(ENCODED_AGENT_NAME_WITH_VERSION),
@@ -205,7 +205,7 @@ public class A2aServerOperationServiceTest {
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         when(response.getContent()).thenReturn(JacksonUtils.toJson(versionInfo));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         when(configOperationService.deleteConfig(anyString(), anyString(), anyString(), any(),
@@ -229,7 +229,7 @@ public class A2aServerOperationServiceTest {
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         when(response.getContent()).thenReturn(JacksonUtils.toJson(versionInfo));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         when(configOperationService.deleteConfig(eq(ENCODED_AGENT_NAME_WITH_VERSION),
@@ -258,7 +258,7 @@ public class A2aServerOperationServiceTest {
         ConfigQueryChainResponse response = mock(ConfigQueryChainResponse.class);
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         a2aServerOperationService.deleteAgent(TEST_NAMESPACE_ID, TEST_AGENT_NAME,
@@ -279,7 +279,7 @@ public class A2aServerOperationServiceTest {
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         when(response.getContent()).thenReturn(JacksonUtils.toJson(versionInfo));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         when(configOperationService.deleteConfig(anyString(), anyString(), anyString(), any(),
@@ -312,7 +312,7 @@ public class A2aServerOperationServiceTest {
         when(detailResponse.getContent())
             .thenReturn(JacksonUtils.toJson(buildTestAgentCardDetailInfo()));
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -346,7 +346,7 @@ public class A2aServerOperationServiceTest {
         when(detailResponse.getContent())
             .thenReturn(JacksonUtils.toJson(buildTestAgentCardDetailInfo()));
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -383,7 +383,7 @@ public class A2aServerOperationServiceTest {
         when(detailResponse.getContent())
             .thenReturn(JacksonUtils.toJson(buildTestAgentCardDetailInfo()));
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -418,7 +418,7 @@ public class A2aServerOperationServiceTest {
         when(detailResponse.getContent())
             .thenReturn(JacksonUtils.toJson(buildTestAgentCardDetailInfo()));
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -452,7 +452,7 @@ public class A2aServerOperationServiceTest {
         when(detailResponse.getContent())
             .thenReturn(JacksonUtils.toJson(buildTestAgentCardDetailInfo()));
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -496,7 +496,7 @@ public class A2aServerOperationServiceTest {
         when(detailResponse.getContent())
             .thenReturn(JacksonUtils.toJson(buildTestAgentCardDetailInfo()));
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -588,7 +588,7 @@ public class A2aServerOperationServiceTest {
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         when(response.getContent()).thenReturn(JacksonUtils.toJson(versionInfo));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         List<AgentVersionDetail> result =
@@ -604,7 +604,7 @@ public class A2aServerOperationServiceTest {
         ConfigQueryChainResponse response = mock(ConfigQueryChainResponse.class);
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         NacosApiException exception = assertThrows(NacosApiException.class, () -> {
@@ -632,7 +632,7 @@ public class A2aServerOperationServiceTest {
         when(detailResponse.getContent()).thenReturn(JacksonUtils.toJson(detailInfo));
         
         // Mock service storage for endpoint injection
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -658,7 +658,7 @@ public class A2aServerOperationServiceTest {
         when(detailResponse.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_NOT_FOUND);
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -688,7 +688,7 @@ public class A2aServerOperationServiceTest {
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         when(detailResponse.getContent()).thenReturn(JacksonUtils.toJson(detailInfo));
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -728,7 +728,7 @@ public class A2aServerOperationServiceTest {
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         when(versionResponse.getContent()).thenReturn(JacksonUtils.toJson(versionInfo));
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse);
         
         NacosApiException exception = assertThrows(NacosApiException.class, () -> {
@@ -762,7 +762,7 @@ public class A2aServerOperationServiceTest {
         serviceInfo.setHosts(Collections.emptyList());
         when(serviceStorage.getData(service)).thenReturn(serviceInfo);
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -807,7 +807,7 @@ public class A2aServerOperationServiceTest {
         serviceInfo.addHost(instance);
         when(serviceStorage.getData(service)).thenReturn(serviceInfo);
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -855,7 +855,7 @@ public class A2aServerOperationServiceTest {
         serviceInfo.setHosts(Collections.emptyList());
         when(serviceStorage.getData(service)).thenReturn(serviceInfo);
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -895,7 +895,7 @@ public class A2aServerOperationServiceTest {
         instance.setMetadata(Map.of(Constants.A2A.AGENT_ENDPOINT_TRANSPORT_KEY, "JSONRPC"));
         serviceInfo.addHost(instance);
         when(serviceStorage.getData(service)).thenReturn(serviceInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         AgentCardDetailInfo result =
@@ -932,7 +932,7 @@ public class A2aServerOperationServiceTest {
         instance.setMetadata(Map.of(Constants.A2A.AGENT_ENDPOINT_TRANSPORT_KEY, "JSONRPC"));
         serviceInfo.addHost(instance);
         when(serviceStorage.getData(service)).thenReturn(serviceInfo);
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         NacosApiException exception =
@@ -962,7 +962,7 @@ public class A2aServerOperationServiceTest {
         serviceInfo.setHosts(Collections.emptyList());
         when(serviceStorage.getData(service)).thenReturn(serviceInfo);
         
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(versionResponse)
             .thenReturn(detailResponse);
         
@@ -1007,7 +1007,7 @@ public class A2aServerOperationServiceTest {
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         when(response.getContent()).thenReturn(JacksonUtils.toJson(versionInfo));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         when(configOperationService.deleteConfig(anyString(), anyString(), anyString(), any(),
@@ -1037,7 +1037,7 @@ public class A2aServerOperationServiceTest {
         when(response.getStatus())
             .thenReturn(ConfigQueryChainResponse.ConfigQueryStatus.CONFIG_FOUND_FORMAL);
         when(response.getContent()).thenReturn(JacksonUtils.toJson(versionInfo));
-        when(configQueryChainService.handle(any(ConfigQueryChainRequest.class)))
+        when(configQueryChainService.handleInternal(any(ConfigQueryChainRequest.class)))
             .thenReturn(response);
         
         when(configOperationService.deleteConfig(eq(ENCODED_AGENT_NAME_WITH_VERSION),
