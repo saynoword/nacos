@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -45,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -211,6 +213,23 @@ class AgentSpecMaintainerServiceImplTest {
     }
     
     @Test
+    @DisplayName("createDraft with commitMsg should include param")
+    void testCreateDraftWithCommitMsg() throws NacosException {
+        HttpRestResult<String> mockRestResult = new HttpRestResult<>();
+        mockRestResult.setData(JacksonUtils.toJson(Result.success("v1")));
+        when(clientHttpProxy.executeSyncHttpRequest(any(HttpRequest.class)))
+            .thenReturn(mockRestResult);
+        
+        String actual = agentSpecService.createDraft("public", "testAgentSpec", "v0", null,
+            "draft commit");
+        
+        assertEquals("v1", actual);
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(clientHttpProxy).executeSyncHttpRequest(requestCaptor.capture());
+        assertEquals("draft commit", requestCaptor.getValue().getParamValues().get("commitMsg"));
+    }
+    
+    @Test
     @DisplayName("updateDraft with setAsLatest should execute")
     void testUpdateDraftWithSetAsLatest() throws NacosException {
         HttpRestResult<String> mockRestResult = new HttpRestResult<>();
@@ -220,6 +239,23 @@ class AgentSpecMaintainerServiceImplTest {
         
         boolean actual = agentSpecService.updateDraft("public", "agentSpecCardJson", true);
         assertTrue(actual);
+    }
+    
+    @Test
+    @DisplayName("updateDraft with commitMsg should include param")
+    void testUpdateDraftWithCommitMsg() throws NacosException {
+        HttpRestResult<String> mockRestResult = new HttpRestResult<>();
+        mockRestResult.setData(JacksonUtils.toJson(Result.success("ok")));
+        when(clientHttpProxy.executeSyncHttpRequest(any(HttpRequest.class)))
+            .thenReturn(mockRestResult);
+        
+        boolean actual = agentSpecService.updateDraft("public", "agentSpecCardJson", true,
+            "update commit");
+        
+        assertTrue(actual);
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(clientHttpProxy).executeSyncHttpRequest(requestCaptor.capture());
+        assertEquals("update commit", requestCaptor.getValue().getParamValues().get("commitMsg"));
     }
     
     @Test
@@ -325,5 +361,27 @@ class AgentSpecMaintainerServiceImplTest {
         
         String actual = agentSpecService.uploadAgentSpecFromZip("public", zipBytes, false);
         assertEquals("uploadedAgentSpec", actual);
+    }
+    
+    @Test
+    @DisplayName("uploadAgentSpecFromZip with commitMsg should include param")
+    void testUploadAgentSpecFromZipWithCommitMsg() throws NacosException {
+        byte[] zipBytes = "test zip content".getBytes();
+        
+        HttpRestResult<String> mockRestResult = new HttpRestResult<>();
+        mockRestResult.setData(JacksonUtils.toJson(Result.success("uploadedAgentSpec")));
+        when(clientHttpProxy.executeSyncHttpRequest(any(HttpRequest.class)))
+            .thenReturn(mockRestResult);
+        
+        String actual = agentSpecService.uploadAgentSpecFromZip("public", zipBytes, true,
+            "upload commit");
+        
+        assertEquals("uploadedAgentSpec", actual);
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(clientHttpProxy).executeSyncHttpRequest(requestCaptor.capture());
+        HttpRequest request = requestCaptor.getValue();
+        assertEquals("true", request.getParamValues().get("overwrite"));
+        assertEquals("upload commit", request.getParamValues().get("commitMsg"));
+        assertTrue(request.isFileUpload());
     }
 }

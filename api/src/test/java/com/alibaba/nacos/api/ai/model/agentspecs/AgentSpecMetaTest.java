@@ -108,7 +108,7 @@ class AgentSpecMetaTest extends BasicRequestTest {
         assertNull(summary.getVersion());
         assertNull(summary.getStatus());
         assertNull(summary.getAuthor());
-        assertNull(summary.getDescription());
+        assertNull(summary.getCommitMsg());
         assertNull(summary.getCreateTime());
         assertNull(summary.getUpdateTime());
         assertNull(summary.getPublishPipelineInfo());
@@ -140,11 +140,11 @@ class AgentSpecMetaTest extends BasicRequestTest {
     }
     
     @Test
-    @DisplayName("test AgentSpecVersionSummary getter and setter for description")
-    void testAgentSpecVersionSummaryGetterAndSetterForDescription() {
+    @DisplayName("test AgentSpecVersionSummary getter and setter for commitMsg")
+    void testAgentSpecVersionSummaryGetterAndSetterForCommitMsg() {
         AgentSpecMeta.AgentSpecVersionSummary summary = new AgentSpecMeta.AgentSpecVersionSummary();
-        summary.setDescription("Version description");
-        assertEquals("Version description", summary.getDescription());
+        summary.setCommitMsg("Version commit message");
+        assertEquals("Version commit message", summary.getCommitMsg());
     }
     
     @Test
@@ -186,6 +186,7 @@ class AgentSpecMetaTest extends BasicRequestTest {
         summary.setVersion("v1.0.0");
         summary.setStatus("online");
         summary.setAuthor("admin");
+        summary.setCommitMsg("commit");
         summary.setDownloadCount(50L);
         
         String json = mapper.writeValueAsString(summary);
@@ -193,6 +194,7 @@ class AgentSpecMetaTest extends BasicRequestTest {
         assertTrue(json.contains("\"version\":\"v1.0.0\""));
         assertTrue(json.contains("\"status\":\"online\""));
         assertTrue(json.contains("\"author\":\"admin\""));
+        assertTrue(json.contains("\"commitMsg\":\"commit\""));
         assertTrue(json.contains("\"downloadCount\":50"));
     }
     
@@ -200,7 +202,7 @@ class AgentSpecMetaTest extends BasicRequestTest {
     @DisplayName("test AgentSpecVersionSummary deserialize from json")
     void testAgentSpecVersionSummaryDeserializeFromJson() throws JsonProcessingException {
         String json = "{\"version\":\"v1.0.0\",\"status\":\"online\",\"author\":\"admin\","
-            + "\"description\":\"Test version\",\"createTime\":1234567890,\"updateTime\":1234567900,"
+            + "\"commitMsg\":\"Test version\",\"createTime\":1234567890,\"updateTime\":1234567900,"
             + "\"downloadCount\":100}";
         
         AgentSpecMeta.AgentSpecVersionSummary summary =
@@ -209,7 +211,7 @@ class AgentSpecMetaTest extends BasicRequestTest {
         assertEquals("v1.0.0", summary.getVersion());
         assertEquals("online", summary.getStatus());
         assertEquals("admin", summary.getAuthor());
-        assertEquals("Test version", summary.getDescription());
+        assertEquals("Test version", summary.getCommitMsg());
         assertEquals(1234567890L, summary.getCreateTime());
         assertEquals(1234567900L, summary.getUpdateTime());
         assertEquals(100L, summary.getDownloadCount());

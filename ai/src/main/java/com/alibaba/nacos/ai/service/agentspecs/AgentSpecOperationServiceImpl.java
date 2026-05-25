@@ -125,6 +125,11 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
      */
     private void createDraftWithAgentSpec(String namespaceId, AgentSpec agentSpec, String version,
         AiResource existedMeta, boolean isNew) throws NacosException {
+        createDraftWithAgentSpec(namespaceId, agentSpec, version, existedMeta, isNew, null);
+    }
+    
+    private void createDraftWithAgentSpec(String namespaceId, AgentSpec agentSpec, String version,
+        AiResource existedMeta, boolean isNew, String commitMsg) throws NacosException {
         String agentSpecName = agentSpec.getName();
         long uniformId = System.currentTimeMillis();
         String currentUser = VisibilityHelper.resolveCurrentIdentity();
@@ -135,7 +140,8 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         // 2) insert draft version row
         resourceManager.insertVersionRow(namespaceId, agentSpecName, RESOURCE_TYPE_AGENTSPEC,
             StringUtils.isBlank(currentUser) ? DEFAULT_AUTHOR : currentUser,
-            AiResourceConstants.VERSION_STATUS_DRAFT, version, agentSpec.getDescription(),
+            AiResourceConstants.VERSION_STATUS_DRAFT, version,
+            resolveVersionDescription(agentSpec, commitMsg),
             buildStorageJson(namespaceId, agentSpecName, version));
         
         // 3) create or update meta for editingVersion
@@ -181,7 +187,7 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
                 summary.setVersion(v.getVersion());
                 summary.setStatus(v.getStatus());
                 summary.setAuthor(v.getAuthor());
-                summary.setDescription(v.getDesc());
+                summary.setCommitMsg(v.getDesc());
                 summary.setCreateTime(v.getGmtCreate() == null ? null : v.getGmtCreate().getTime());
                 summary.setUpdateTime(
                     v.getGmtModified() == null ? null : v.getGmtModified().getTime());
@@ -362,26 +368,27 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
      * (containing multiple inner ZIPs). Each spec is processed via {@link #uploadSingleAgentSpecFromZip}.
      */
     @Override
-    public String uploadAgentSpecFromZip(String namespaceId, byte[] zipBytes, boolean overwrite)
-        throws NacosException {
+    public String uploadAgentSpecFromZip(AgentSpecUploadRequest request) throws NacosException {
         // Try to parse ZIP as a multi-spec seed archive (containing multiple inner ZIPs)
-        List<AgentSpecSeedArchiveReader.AgentSpecPackage> packages = readUploadPackages(zipBytes);
+        List<AgentSpecSeedArchiveReader.AgentSpecPackage> packages =
+            readUploadPackages(request.getZipBytes());
         if (!packages.isEmpty()) {
             // Multi-spec archive: import each one and return summary
             if (packages.size() == 1) {
-                return uploadSingleAgentSpecFromZip(namespaceId, packages.get(0).getZipBytes(),
-                    overwrite);
+                return uploadSingleAgentSpecFromZip(request.getNamespaceId(),
+                    packages.get(0).getZipBytes(), request.isOverwrite(), request.getCommitMsg());
             }
             List<String> importedNames = new ArrayList<>(packages.size());
             for (AgentSpecSeedArchiveReader.AgentSpecPackage each : packages) {
-                importedNames
-                    .add(uploadSingleAgentSpecFromZip(namespaceId, each.getZipBytes(), overwrite));
+                importedNames.add(uploadSingleAgentSpecFromZip(request.getNamespaceId(),
+                    each.getZipBytes(), request.isOverwrite(), request.getCommitMsg()));
             }
             return String.format("Imported %d agentspecs: %s", importedNames.size(),
                 String.join(", ", importedNames));
         }
         // Not a seed archive: treat as a single AgentSpec ZIP
-        return uploadSingleAgentSpecFromZip(namespaceId, zipBytes, overwrite);
+        return uploadSingleAgentSpecFromZip(request.getNamespaceId(), request.getZipBytes(),
+            request.isOverwrite(), request.getCommitMsg());
     }
     
     /**
@@ -403,7 +410,7 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
      * If overwrite=true, replaces existing draft or creates new. Otherwise fails on working version conflict.
      */
     private String uploadSingleAgentSpecFromZip(String namespaceId, byte[] zipBytes,
-        boolean overwrite)
+        boolean overwrite, String commitMsg)
         throws NacosException {
         // Step 1: Parse ZIP and validate agentspec name
         AgentSpec agentSpec = AgentSpecZipParser.parseAgentSpecFromZip(zipBytes, namespaceId);
@@ -415,12 +422,12 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         // Step 2: Check if an agentspec with the same name already exists
         AiResource meta = resourceManager.findMeta(namespaceId, name, RESOURCE_TYPE_AGENTSPEC);
         if (overwrite) {
-            return overwriteUploadedAgentSpec(namespaceId, agentSpec, meta);
+            return overwriteUploadedAgentSpec(namespaceId, agentSpec, meta, commitMsg);
         }
         if (meta == null) {
             // Brand-new agentspec: create initial draft
             String version = DEFAULT_INITIAL_VERSION;
-            createDraftWithAgentSpec(namespaceId, agentSpec, version, null, true);
+            createDraftWithAgentSpec(namespaceId, agentSpec, version, null, true, commitMsg);
             AiResourceTraceService.logSuccess(RESOURCE_TYPE_AGENTSPEC, name, version,
                 AiResourceTraceService.OP_UPLOAD,
                 VisibilityHelper.resolveCurrentIdentity(), VisibilityHelper.resolveClientIp());
@@ -434,7 +441,7 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         
         // Step 3: Assign new version number and create draft
         String newVersion = nextVersion(namespaceId, name);
-        createDraftWithAgentSpec(namespaceId, agentSpec, newVersion, meta, false);
+        createDraftWithAgentSpec(namespaceId, agentSpec, newVersion, meta, false, commitMsg);
         resourceManager.syncImportedMeta(namespaceId, meta, agentSpec.getDescription(),
             agentSpec.getBizTags());
         AiResourceTraceService.logSuccess(RESOURCE_TYPE_AGENTSPEC, name, newVersion,
@@ -559,12 +566,13 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
      * otherwise create a new draft with a bumped version.
      */
     private String overwriteUploadedAgentSpec(String namespaceId, AgentSpec agentSpec,
-        AiResource meta)
+        AiResource meta, String commitMsg)
         throws NacosException {
         String name = agentSpec.getName();
         // No meta record = brand-new agentspec, create initial draft directly
         if (meta == null) {
-            createDraftWithAgentSpec(namespaceId, agentSpec, DEFAULT_INITIAL_VERSION, null, true);
+            createDraftWithAgentSpec(namespaceId, agentSpec, DEFAULT_INITIAL_VERSION, null, true,
+                commitMsg);
             return name;
         }
         
@@ -573,13 +581,13 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         String editing = info.getEditingVersion();
         // Existing editing draft -> overwrite draft content in-place
         if (StringUtils.isNotBlank(editing)) {
-            overwriteEditingDraft(namespaceId, agentSpec, meta, editing);
+            overwriteEditingDraft(namespaceId, agentSpec, meta, editing, commitMsg);
             return name;
         }
         
         // No editing draft -> assign new version number and create new draft
         String newVersion = nextVersion(namespaceId, name);
-        createDraftWithAgentSpec(namespaceId, agentSpec, newVersion, meta, false);
+        createDraftWithAgentSpec(namespaceId, agentSpec, newVersion, meta, false, commitMsg);
         resourceManager.syncImportedMeta(namespaceId, meta, agentSpec.getDescription(),
             agentSpec.getBizTags());
         return name;
@@ -589,7 +597,7 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
      * Overwrite an existing editing draft's storage content, version description, and meta info.
      */
     private void overwriteEditingDraft(String namespaceId, AgentSpec agentSpec, AiResource meta,
-        String editing)
+        String editing, String commitMsg)
         throws NacosException {
         resourceManager.requireDraftVersion(namespaceId, agentSpec.getName(),
             RESOURCE_TYPE_AGENTSPEC, editing);
@@ -598,7 +606,7 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         resourceManager.updateVersionStorageAndDesc(namespaceId, agentSpec.getName(),
             RESOURCE_TYPE_AGENTSPEC, editing,
             buildStorageJson(namespaceId, agentSpec.getName(), editing),
-            agentSpec.getDescription());
+            resolveVersionDescription(agentSpec, commitMsg));
         resourceManager.syncImportedMeta(namespaceId, meta, agentSpec.getDescription(),
             agentSpec.getBizTags());
     }
@@ -689,7 +697,7 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
      */
     @Override
     public String createDraft(String namespaceId, String name, String basedOnVersion,
-        String targetVersion)
+        String targetVersion, String commitMsg)
         throws NacosException {
         AiResource meta = resourceManager.findMeta(namespaceId, name, RESOURCE_TYPE_AGENTSPEC);
         // ---- Case A: Brand-new agentspec ----
@@ -705,7 +713,7 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
             AgentSpec emptyAgentSpec = new AgentSpec();
             emptyAgentSpec.setName(name);
             emptyAgentSpec.setNamespaceId(namespaceId);
-            createDraftWithAgentSpec(namespaceId, emptyAgentSpec, version, null, true);
+            createDraftWithAgentSpec(namespaceId, emptyAgentSpec, version, null, true, commitMsg);
             AiResourceTraceService.logSuccess(RESOURCE_TYPE_AGENTSPEC, name, version,
                 AiResourceTraceService.OP_CREATE_DRAFT, VisibilityHelper.resolveCurrentIdentity(),
                 VisibilityHelper.resolveClientIp());
@@ -727,7 +735,8 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
             AgentSpec emptyAgentSpec = new AgentSpec();
             emptyAgentSpec.setName(name);
             emptyAgentSpec.setNamespaceId(namespaceId);
-            createDraftWithAgentSpec(namespaceId, emptyAgentSpec, newVersion, meta, false);
+            createDraftWithAgentSpec(namespaceId, emptyAgentSpec, newVersion, meta, false,
+                commitMsg);
             AiResourceTraceService.logSuccess(RESOURCE_TYPE_AGENTSPEC, name, newVersion,
                 AiResourceTraceService.OP_CREATE_DRAFT, VisibilityHelper.resolveCurrentIdentity(),
                 VisibilityHelper.resolveClientIp());
@@ -741,7 +750,8 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         
         // Step 2: Insert draft version row
         resourceManager.insertVersionRow(namespaceId, name, RESOURCE_TYPE_AGENTSPEC, DEFAULT_AUTHOR,
-            AiResourceConstants.VERSION_STATUS_DRAFT, newVersion, baseAgentSpec.getDescription(),
+            AiResourceConstants.VERSION_STATUS_DRAFT, newVersion,
+            resolveVersionDescription(baseAgentSpec, commitMsg),
             buildStorageJson(namespaceId, name, newVersion));
         
         // Step 3: Update meta's editingVersion pointer
@@ -758,7 +768,8 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
      * Writes updated files to storage and bumps the meta description.
      */
     @Override
-    public void updateDraft(String namespaceId, AgentSpec draftAgentSpec) throws NacosException {
+    public void updateDraft(String namespaceId, AgentSpec draftAgentSpec, String commitMsg)
+        throws NacosException {
         if (draftAgentSpec == null || StringUtils.isBlank(draftAgentSpec.getName())) {
             throw new NacosApiException(NacosException.INVALID_PARAM, ErrorCode.PARAMETER_MISSING,
                 "AgentSpec name is required");
@@ -768,7 +779,7 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         // Auto-create brand-new draft when meta does not exist (unlike Skill, AgentSpec's updateDraft supports auto-creation)
         if (meta == null) {
             createDraftWithAgentSpec(namespaceId, draftAgentSpec, DEFAULT_INITIAL_VERSION, null,
-                true);
+                true, commitMsg);
             AiResourceTraceService.logSuccess(RESOURCE_TYPE_AGENTSPEC, name,
                 DEFAULT_INITIAL_VERSION,
                 AiResourceTraceService.OP_CREATE_DRAFT, VisibilityHelper.resolveCurrentIdentity(),
@@ -790,11 +801,19 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         writeAgentSpecToStorage(namespaceId, draftAgentSpec, editing, uniformId);
         resourceManager.updateVersionStorageAndDesc(namespaceId, name, RESOURCE_TYPE_AGENTSPEC,
             editing,
-            buildStorageJson(namespaceId, name, editing), draftAgentSpec.getDescription());
+            buildStorageJson(namespaceId, name, editing),
+            resolveVersionDescription(draftAgentSpec, commitMsg));
         resourceManager.bumpMetaDescription(namespaceId, meta, draftAgentSpec.getDescription());
         AiResourceTraceService.logSuccess(RESOURCE_TYPE_AGENTSPEC, name, editing,
             AiResourceTraceService.OP_UPDATE_DRAFT,
             VisibilityHelper.resolveCurrentIdentity(), VisibilityHelper.resolveClientIp());
+    }
+    
+    private String resolveVersionDescription(AgentSpec agentSpec, String commitMsg) {
+        if (StringUtils.isNotBlank(commitMsg)) {
+            return commitMsg;
+        }
+        return agentSpec == null ? null : agentSpec.getDescription();
     }
     
     /**

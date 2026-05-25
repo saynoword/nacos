@@ -210,10 +210,18 @@ public class AgentSpecMaintainerServiceImpl extends AbstractAiDelegateMaintainer
     @Override
     public String uploadAgentSpecFromZip(String namespaceId, byte[] zipBytes, boolean overwrite)
         throws NacosException {
+        return uploadAgentSpecFromZip(namespaceId, zipBytes, overwrite, null);
+    }
+    
+    @Override
+    public String uploadAgentSpecFromZip(String namespaceId, byte[] zipBytes, boolean overwrite,
+        String commitMsg)
+        throws NacosException {
         namespaceId = resolveNamespace(namespaceId);
         Map<String, String> params = new HashMap<>(4);
         params.put("namespaceId", namespaceId);
         params.put("overwrite", String.valueOf(overwrite));
+        putIfNotBlank(params, "commitMsg", commitMsg);
         HttpRequest httpRequest = buildHttpRequestBuilder(buildRequestResource(namespaceId, null))
             .setHttpMethod(HttpMethod.POST)
             .setPath(Constants.AdminApiPath.AI_AGENTSPEC_UPLOAD_ADMIN_PATH).setParamValue(params)
@@ -229,12 +237,20 @@ public class AgentSpecMaintainerServiceImpl extends AbstractAiDelegateMaintainer
     public String createDraft(String namespaceId, String agentSpecName, String basedOnVersion,
         String targetVersion)
         throws NacosException {
+        return createDraft(namespaceId, agentSpecName, basedOnVersion, targetVersion, null);
+    }
+    
+    @Override
+    public String createDraft(String namespaceId, String agentSpecName, String basedOnVersion,
+        String targetVersion, String commitMsg)
+        throws NacosException {
         namespaceId = resolveNamespace(namespaceId);
         Map<String, String> params = new HashMap<>(8);
         params.put("namespaceId", namespaceId);
         params.put("agentSpecName", agentSpecName);
         putIfNotBlank(params, "basedOnVersion", basedOnVersion);
         putIfNotBlank(params, "targetVersion", targetVersion);
+        putIfNotBlank(params, "commitMsg", commitMsg);
         HttpRequest httpRequest =
             buildHttpRequestBuilder(buildRequestResource(namespaceId, agentSpecName))
                 .setHttpMethod(HttpMethod.POST)
@@ -250,6 +266,13 @@ public class AgentSpecMaintainerServiceImpl extends AbstractAiDelegateMaintainer
     @Override
     public boolean updateDraft(String namespaceId, String agentSpecCard, Boolean setAsLatest)
         throws NacosException {
+        return updateDraft(namespaceId, agentSpecCard, setAsLatest, null);
+    }
+    
+    @Override
+    public boolean updateDraft(String namespaceId, String agentSpecCard, Boolean setAsLatest,
+        String commitMsg)
+        throws NacosException {
         namespaceId = resolveNamespace(namespaceId);
         Map<String, String> params = new HashMap<>(8);
         params.put("namespaceId", namespaceId);
@@ -257,6 +280,7 @@ public class AgentSpecMaintainerServiceImpl extends AbstractAiDelegateMaintainer
         if (null != setAsLatest) {
             params.put("setAsLatest", String.valueOf(setAsLatest));
         }
+        putIfNotBlank(params, "commitMsg", commitMsg);
         HttpRequest httpRequest = buildHttpRequestBuilder(buildRequestResource(namespaceId, null))
             .setHttpMethod(HttpMethod.PUT)
             .setPath(Constants.AdminApiPath.AI_AGENTSPEC_ADMIN_PATH + "/draft")

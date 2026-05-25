@@ -230,6 +230,22 @@ public interface AgentSpecMaintainerService {
         throws NacosException;
     
     /**
+     * Upload agentspec from zip file with optional commit message.
+     *
+     * @param namespaceId namespace ID
+     * @param zipBytes    zip file bytes
+     * @param overwrite   whether to overwrite the current editable draft when the agentspec already exists
+     * @param commitMsg   version-level commit message (optional)
+     * @return agentspec name
+     * @throws NacosException if fail to upload agentspec
+     */
+    default String uploadAgentSpecFromZip(String namespaceId, byte[] zipBytes, boolean overwrite,
+        String commitMsg)
+        throws NacosException {
+        return uploadAgentSpecFromZip(namespaceId, zipBytes, overwrite);
+    }
+    
+    /**
      * Upload agentspec from zip file with default namespace.
      *
      * @param zipBytes zip file bytes
@@ -269,6 +285,23 @@ public interface AgentSpecMaintainerService {
         throws NacosException;
     
     /**
+     * Create draft version for an agentspec with optional commit message.
+     *
+     * @param namespaceId     namespace ID
+     * @param agentSpecName   agentspec name
+     * @param basedOnVersion  base version (optional)
+     * @param targetVersion   target version (optional, auto-increment if blank)
+     * @param commitMsg       version-level commit message (optional)
+     * @return created draft version
+     * @throws NacosException if fail to create draft
+     */
+    default String createDraft(String namespaceId, String agentSpecName, String basedOnVersion,
+        String targetVersion, String commitMsg)
+        throws NacosException {
+        return createDraft(namespaceId, agentSpecName, basedOnVersion, targetVersion);
+    }
+    
+    /**
      * Update current draft content.
      *
      * @param namespaceId    namespace ID
@@ -279,6 +312,22 @@ public interface AgentSpecMaintainerService {
      */
     boolean updateDraft(String namespaceId, String agentSpecCard, Boolean setAsLatest)
         throws NacosException;
+    
+    /**
+     * Update current draft content with optional commit message.
+     *
+     * @param namespaceId    namespace ID
+     * @param agentSpecCard  agentspec card JSON string
+     * @param setAsLatest    whether set as latest (optional)
+     * @param commitMsg      version-level commit message (optional)
+     * @return true if update success
+     * @throws NacosException if fail to update draft
+     */
+    default boolean updateDraft(String namespaceId, String agentSpecCard, Boolean setAsLatest,
+        String commitMsg)
+        throws NacosException {
+        return updateDraft(namespaceId, agentSpecCard, setAsLatest);
+    }
     
     /**
      * Delete current draft version.

@@ -27,6 +27,7 @@ import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecPublishForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecScopeForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecSubmitForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecUpdateForm;
+import com.alibaba.nacos.ai.service.agentspecs.AgentSpecUploadRequest;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpec;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecMeta;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecSummary;
@@ -225,10 +226,17 @@ class AgentSpecRemoteHandlerTest {
     @Test
     void testUploadAgentSpecFromZip() throws NacosException {
         byte[] zip = new byte[] {1, 2, 3};
-        when(agentSpecMaintainerService.uploadAgentSpecFromZip(NAMESPACE_ID, zip, true))
+        AgentSpecUploadRequest request = AgentSpecUploadRequest.builder()
+            .namespaceId(NAMESPACE_ID)
+            .zipBytes(zip)
+            .overwrite(true)
+            .commitMsg("commit")
+            .build();
+        when(agentSpecMaintainerService.uploadAgentSpecFromZip(NAMESPACE_ID, zip, true,
+            "commit"))
             .thenReturn(AGENT_SPEC_NAME);
         
-        String result = agentSpecRemoteHandler.uploadAgentSpecFromZip(NAMESPACE_ID, zip, true);
+        String result = agentSpecRemoteHandler.uploadAgentSpecFromZip(request);
         
         assertEquals(AGENT_SPEC_NAME, result);
     }
@@ -240,7 +248,9 @@ class AgentSpecRemoteHandlerTest {
         form.setAgentSpecName(AGENT_SPEC_NAME);
         form.setBasedOnVersion("v1");
         form.setTargetVersion("v2");
-        when(agentSpecMaintainerService.createDraft(NAMESPACE_ID, AGENT_SPEC_NAME, "v1", "v2"))
+        form.setCommitMsg("commit");
+        when(agentSpecMaintainerService.createDraft(NAMESPACE_ID, AGENT_SPEC_NAME, "v1", "v2",
+            "commit"))
             .thenReturn("v2-draft");
         
         String result = agentSpecRemoteHandler.createDraft(form);
@@ -255,12 +265,15 @@ class AgentSpecRemoteHandlerTest {
         form.setAgentSpecName(AGENT_SPEC_NAME);
         form.setAgentSpecCard("{\"name\":\"test\"}");
         form.setSetAsLatest(true);
-        when(agentSpecMaintainerService.updateDraft(NAMESPACE_ID, "{\"name\":\"test\"}", true))
+        form.setCommitMsg("update");
+        when(agentSpecMaintainerService.updateDraft(NAMESPACE_ID, "{\"name\":\"test\"}", true,
+            "update"))
             .thenReturn(true);
         
         agentSpecRemoteHandler.updateDraft(form);
         
-        verify(agentSpecMaintainerService).updateDraft(NAMESPACE_ID, "{\"name\":\"test\"}", true);
+        verify(agentSpecMaintainerService).updateDraft(NAMESPACE_ID, "{\"name\":\"test\"}", true,
+            "update");
     }
     
     @Test

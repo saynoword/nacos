@@ -28,6 +28,7 @@ import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecScopeForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecSubmitForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecUpdateForm;
 import com.alibaba.nacos.ai.service.agentspecs.AgentSpecOperationService;
+import com.alibaba.nacos.ai.service.agentspecs.AgentSpecUploadRequest;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpec;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecMeta;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecSummary;
@@ -135,10 +136,16 @@ class AgentSpecInnerHandlerTest {
     @Test
     void testUploadAgentSpecFromZip() throws NacosException {
         byte[] zip = new byte[] {1, 2, 3};
-        when(agentSpecOperationService.uploadAgentSpecFromZip(NS, zip, true))
+        AgentSpecUploadRequest request = AgentSpecUploadRequest.builder()
+            .namespaceId(NS)
+            .zipBytes(zip)
+            .overwrite(true)
+            .commitMsg("commit")
+            .build();
+        when(agentSpecOperationService.uploadAgentSpecFromZip(request))
             .thenReturn(NAME);
         
-        String result = handler.uploadAgentSpecFromZip(NS, zip, true);
+        String result = handler.uploadAgentSpecFromZip(request);
         
         assertEquals(NAME, result);
     }
@@ -150,7 +157,8 @@ class AgentSpecInnerHandlerTest {
         form.setAgentSpecName(NAME);
         form.setBasedOnVersion("v1");
         form.setTargetVersion("v2");
-        when(agentSpecOperationService.createDraft(NS, NAME, "v1", "v2"))
+        form.setCommitMsg("commit");
+        when(agentSpecOperationService.createDraft(NS, NAME, "v1", "v2", "commit"))
             .thenReturn("v2-draft");
         
         String result = handler.createDraft(form);
@@ -164,11 +172,13 @@ class AgentSpecInnerHandlerTest {
         form.setNamespaceId(NS);
         form.setAgentSpecName(NAME);
         form.setAgentSpecCard("{\"name\":\"test-agentspec\",\"version\":\"v1-draft\"}");
-        doNothing().when(agentSpecOperationService).updateDraft(eq(NS), any(AgentSpec.class));
+        form.setCommitMsg("update");
+        doNothing().when(agentSpecOperationService)
+            .updateDraft(eq(NS), any(AgentSpec.class), eq("update"));
         
         handler.updateDraft(form);
         
-        verify(agentSpecOperationService).updateDraft(eq(NS), any(AgentSpec.class));
+        verify(agentSpecOperationService).updateDraft(eq(NS), any(AgentSpec.class), eq("update"));
     }
     
     @Test

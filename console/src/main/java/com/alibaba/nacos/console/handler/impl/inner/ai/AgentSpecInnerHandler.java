@@ -28,6 +28,7 @@ import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecScopeForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecSubmitForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecUpdateForm;
 import com.alibaba.nacos.ai.service.agentspecs.AgentSpecOperationService;
+import com.alibaba.nacos.ai.service.agentspecs.AgentSpecUploadRequest;
 import com.alibaba.nacos.ai.utils.AgentSpecRequestUtil;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpec;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecMeta;
@@ -88,21 +89,21 @@ public class AgentSpecInnerHandler implements AgentSpecHandler {
     }
     
     @Override
-    public String uploadAgentSpecFromZip(String namespaceId, byte[] zipBytes, boolean overwrite)
-        throws NacosException {
-        return agentSpecOperationService.uploadAgentSpecFromZip(namespaceId, zipBytes, overwrite);
+    public String uploadAgentSpecFromZip(AgentSpecUploadRequest request) throws NacosException {
+        return agentSpecOperationService.uploadAgentSpecFromZip(request);
     }
     
     @Override
     public String createDraft(AgentSpecDraftCreateForm form) throws NacosException {
         return agentSpecOperationService.createDraft(form.getNamespaceId(), form.getAgentSpecName(),
-            form.getBasedOnVersion(), form.getTargetVersion());
+            form.getBasedOnVersion(), form.getTargetVersion(), form.getCommitMsg());
     }
     
     @Override
     public void updateDraft(AgentSpecUpdateForm form) throws NacosException {
         AgentSpec agentSpec = AgentSpecRequestUtil.parseAgentSpec(form);
-        agentSpecOperationService.updateDraft(form.getNamespaceId(), agentSpec);
+        agentSpecOperationService.updateDraft(form.getNamespaceId(), agentSpec,
+            form.getCommitMsg());
     }
     
     @Override

@@ -27,6 +27,7 @@ import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecPublishForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecScopeForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecSubmitForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecUpdateForm;
+import com.alibaba.nacos.ai.service.agentspecs.AgentSpecUploadRequest;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpec;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecMeta;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecSummary;
@@ -126,27 +127,21 @@ class AgentSpecProxyTest {
     }
     
     @Test
-    void testUploadAgentSpecFromZipDefaultOverwrite() throws NacosException {
+    void testUploadAgentSpecFromZip() throws NacosException {
         byte[] zipBytes = new byte[] {1, 2, 3};
-        when(agentSpecHandler.uploadAgentSpecFromZip(NS, zipBytes, false))
+        AgentSpecUploadRequest request = AgentSpecUploadRequest.builder()
+            .namespaceId(NS)
+            .zipBytes(zipBytes)
+            .overwrite(true)
+            .commitMsg("commit")
+            .build();
+        when(agentSpecHandler.uploadAgentSpecFromZip(request))
             .thenReturn(AGENT_SPEC_NAME);
         
-        String result = agentSpecProxy.uploadAgentSpecFromZip(NS, zipBytes);
+        String result = agentSpecProxy.uploadAgentSpecFromZip(request);
         
         assertEquals(AGENT_SPEC_NAME, result);
-        verify(agentSpecHandler).uploadAgentSpecFromZip(NS, zipBytes, false);
-    }
-    
-    @Test
-    void testUploadAgentSpecFromZipWithOverwrite() throws NacosException {
-        byte[] zipBytes = new byte[] {1, 2, 3};
-        when(agentSpecHandler.uploadAgentSpecFromZip(NS, zipBytes, true))
-            .thenReturn(AGENT_SPEC_NAME);
-        
-        String result = agentSpecProxy.uploadAgentSpecFromZip(NS, zipBytes, true);
-        
-        assertEquals(AGENT_SPEC_NAME, result);
-        verify(agentSpecHandler).uploadAgentSpecFromZip(NS, zipBytes, true);
+        verify(agentSpecHandler).uploadAgentSpecFromZip(request);
     }
     
     @Test

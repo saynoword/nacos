@@ -29,6 +29,7 @@ import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecScopeForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecSubmitForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecUpdateForm;
 import com.alibaba.nacos.ai.param.AgentSpecHttpParamExtractor;
+import com.alibaba.nacos.ai.service.agentspecs.AgentSpecUploadRequest;
 import com.alibaba.nacos.ai.utils.AgentSpecRequestUtil;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpec;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecMeta;
@@ -141,6 +142,8 @@ public class ConsoleAgentSpecController {
      *
      * @param request     HTTP servlet request
      * @param namespaceId namespace ID
+     * @param overwrite   whether to overwrite existing editable draft
+     * @param commitMsg   version-level commit message
      * @param file        zip file containing agentspec
      * @return result of the upload operation
      * @throws NacosException if the upload fails
@@ -152,11 +155,17 @@ public class ConsoleAgentSpecController {
         @RequestParam(value = "namespaceId", required = false) String namespaceId,
         @RequestParam(value = "overwrite", required = false,
             defaultValue = "false") boolean overwrite,
+        @RequestParam(value = "commitMsg", required = false) String commitMsg,
         @RequestParam("file") MultipartFile file) throws NacosException {
         namespaceId = NamespaceUtil.processNamespaceParameter(namespaceId);
         byte[] zipBytes = AgentSpecRequestUtil.validateAndExtractZipBytes(file);
-        String agentSpecName =
-            agentSpecProxy.uploadAgentSpecFromZip(namespaceId, zipBytes, overwrite);
+        AgentSpecUploadRequest uploadRequest = AgentSpecUploadRequest.builder()
+            .namespaceId(namespaceId)
+            .zipBytes(zipBytes)
+            .overwrite(overwrite)
+            .commitMsg(commitMsg)
+            .build();
+        String agentSpecName = agentSpecProxy.uploadAgentSpecFromZip(uploadRequest);
         return Result.success(agentSpecName);
     }
     

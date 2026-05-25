@@ -27,6 +27,7 @@ import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecPublishForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecScopeForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecSubmitForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecUpdateForm;
+import com.alibaba.nacos.ai.service.agentspecs.AgentSpecUploadRequest;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpec;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecMeta;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecSummary;
@@ -101,24 +102,24 @@ public class AgentSpecRemoteHandler implements AgentSpecHandler {
     }
     
     @Override
-    public String uploadAgentSpecFromZip(String namespaceId, byte[] zipBytes, boolean overwrite)
-        throws NacosException {
-        return clientHolder.getAiMaintainerService().agentSpec().uploadAgentSpecFromZip(namespaceId,
-            zipBytes,
-            overwrite);
+    public String uploadAgentSpecFromZip(AgentSpecUploadRequest request) throws NacosException {
+        return clientHolder.getAiMaintainerService().agentSpec().uploadAgentSpecFromZip(
+            request.getNamespaceId(), request.getZipBytes(), request.isOverwrite(),
+            request.getCommitMsg());
     }
     
     @Override
     public String createDraft(AgentSpecDraftCreateForm form) throws NacosException {
         return clientHolder.getAiMaintainerService().agentSpec()
             .createDraft(form.getNamespaceId(), form.getAgentSpecName(), form.getBasedOnVersion(),
-                form.getTargetVersion());
+                form.getTargetVersion(), form.getCommitMsg());
     }
     
     @Override
     public void updateDraft(AgentSpecUpdateForm form) throws NacosException {
         clientHolder.getAiMaintainerService().agentSpec()
-            .updateDraft(form.getNamespaceId(), form.getAgentSpecCard(), form.getSetAsLatest());
+            .updateDraft(form.getNamespaceId(), form.getAgentSpecCard(), form.getSetAsLatest(),
+                form.getCommitMsg());
     }
     
     @Override

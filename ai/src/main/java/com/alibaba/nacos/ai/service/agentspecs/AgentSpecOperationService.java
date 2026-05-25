@@ -134,27 +134,11 @@ public interface AgentSpecOperationService {
     /**
      * Upload agentspec from zip file.
      *
-     * @param namespaceId namespace ID
-     * @param zipBytes zip file bytes
+     * @param request upload request
      * @return agentspec name
      * @throws NacosException if upload failed
      */
-    default String uploadAgentSpecFromZip(String namespaceId, byte[] zipBytes)
-        throws NacosException {
-        return uploadAgentSpecFromZip(namespaceId, zipBytes, false);
-    }
-    
-    /**
-     * Upload agentspec from zip file.
-     *
-     * @param namespaceId namespace ID
-     * @param zipBytes zip file bytes
-     * @param overwrite whether to overwrite the current editable draft when the agentspec already exists
-     * @return agentspec name
-     * @throws NacosException if upload failed
-     */
-    String uploadAgentSpecFromZip(String namespaceId, byte[] zipBytes, boolean overwrite)
-        throws NacosException;
+    String uploadAgentSpecFromZip(AgentSpecUploadRequest request) throws NacosException;
     
     /**
      * Bootstrap agentspec from zip file as an online agentspec.
@@ -215,20 +199,23 @@ public interface AgentSpecOperationService {
      * @param name agentspec name
      * @param basedOnVersion base version (optional, default latest)
      * @param targetVersion target version (optional, auto-increment if blank)
+     * @param commitMsg version-level commit message (optional)
      * @return created draft version
      * @throws NacosException if draft creation failed
      */
-    String createDraft(String namespaceId, String name, String basedOnVersion, String targetVersion)
-        throws NacosException;
+    String createDraft(String namespaceId, String name, String basedOnVersion, String targetVersion,
+        String commitMsg) throws NacosException;
     
     /**
      * Update existing draft content.
      *
      * @param namespaceId namespace ID
      * @param draftAgentSpec full agentspec content to write into draft
+     * @param commitMsg version-level commit message (optional)
      * @throws NacosException if update failed
      */
-    void updateDraft(String namespaceId, AgentSpec draftAgentSpec) throws NacosException;
+    void updateDraft(String namespaceId, AgentSpec draftAgentSpec, String commitMsg)
+        throws NacosException;
     
     /**
      * Delete current draft and release working pointer.

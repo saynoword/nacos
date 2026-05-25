@@ -18,6 +18,7 @@ package com.alibaba.nacos.console.controller.v3.ai;
 
 import com.alibaba.nacos.ai.constant.Constants;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecPublishForm;
+import com.alibaba.nacos.ai.service.agentspecs.AgentSpecUploadRequest;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpec;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecMeta;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecSummary;
@@ -46,8 +47,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -190,8 +190,8 @@ class ConsoleAgentSpecControllerTest {
     
     @Test
     void testUploadAgentSpec() throws Exception {
-        when(agentSpecProxy.uploadAgentSpecFromZip(anyString(), any(byte[].class),
-            anyBoolean())).thenReturn(AGENT_SPEC_NAME);
+        when(agentSpecProxy.uploadAgentSpecFromZip(any(AgentSpecUploadRequest.class)))
+            .thenReturn(AGENT_SPEC_NAME);
         
         MockMultipartFile file = new MockMultipartFile("file", "agentspec.zip",
             "application/zip", new byte[] {0x50, 0x4B, 0x03, 0x04, 0, 0, 0, 0,
@@ -199,7 +199,8 @@ class ConsoleAgentSpecControllerTest {
         
         MockHttpServletResponse response = mockMvc.perform(
             MockMvcRequestBuilders.multipart(BASE_PATH + "/upload").file(file)
-                .param("namespaceId", NS).param("overwrite", "false"))
+                .param("namespaceId", NS).param("overwrite", "false")
+                .param("commitMsg", "commit"))
             .andReturn().getResponse();
         
         assertEquals(200, response.getStatus());
@@ -207,6 +208,9 @@ class ConsoleAgentSpecControllerTest {
             response.getContentAsString(), new TypeReference<>() {
             });
         assertEquals(AGENT_SPEC_NAME, result.getData());
+        verify(agentSpecProxy).uploadAgentSpecFromZip(
+            argThat(request -> NS.equals(request.getNamespaceId()) && !request.isOverwrite()
+                && "commit".equals(request.getCommitMsg())));
     }
     
     @Test

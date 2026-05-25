@@ -26,6 +26,7 @@ import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecPublishForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecScopeForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecSubmitForm;
 import com.alibaba.nacos.ai.form.agentspecs.admin.AgentSpecUpdateForm;
+import com.alibaba.nacos.ai.service.agentspecs.AgentSpecUploadRequest;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.api.exception.api.NacosApiException;
 import com.alibaba.nacos.core.model.form.PageForm;
@@ -75,8 +76,12 @@ class AgentSpecNoopHandlerTest {
     
     @Test
     void testUploadAgentSpecFromZipThrows() {
+        AgentSpecUploadRequest request = AgentSpecUploadRequest.builder()
+            .namespaceId("ns")
+            .zipBytes(new byte[0])
+            .build();
         NacosApiException ex = assertThrows(NacosApiException.class,
-            () -> handler.uploadAgentSpecFromZip("ns", new byte[0], false));
+            () -> handler.uploadAgentSpecFromZip(request));
         assertEquals(NacosException.SERVER_NOT_IMPLEMENTED, ex.getErrCode());
     }
     

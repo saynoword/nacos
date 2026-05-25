@@ -47,7 +47,7 @@ public class AgentSpecMeta extends AgentSpecSummary {
         
         private String author;
         
-        private String description;
+        private String commitMsg;
         
         private Long createTime;
         
@@ -81,12 +81,12 @@ public class AgentSpecMeta extends AgentSpecSummary {
             this.author = author;
         }
         
-        public String getDescription() {
-            return description;
+        public String getCommitMsg() {
+            return commitMsg;
         }
         
-        public void setDescription(String description) {
-            this.description = description;
+        public void setCommitMsg(String commitMsg) {
+            this.commitMsg = commitMsg;
         }
         
         public Long getCreateTime() {
