@@ -25,6 +25,7 @@ import {
   X,
   AlertCircle,
   Loader2,
+  MessageSquare,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -118,6 +119,7 @@ export default function AgentSpecDetailPage() {
   const [editResources, setEditResources] = useState<Record<string, AgentSpecResource>>({});
   const [editContent, setEditContent] = useState('{}');
   const [draftSaving, setDraftSaving] = useState(false);
+  const [draftCommitMsg, setDraftCommitMsg] = useState('');
   const [editVirtualFolders, setEditVirtualFolders] = useState<Set<string>>(new Set());
   const [createNodeOpen, setCreateNodeOpen] = useState(false);
   const [createNodeMode, setCreateNodeMode] = useState<'file' | 'folder'>('file');
@@ -129,6 +131,7 @@ export default function AgentSpecDetailPage() {
   const [createDraftDialogOpen, setCreateDraftDialogOpen] = useState(false);
   const [createDraftFromVersion, setCreateDraftFromVersion] = useState('');
   const [createDraftTargetVersion, setCreateDraftTargetVersion] = useState('');
+  const [createDraftCommitMsg, setCreateDraftCommitMsg] = useState('');
 
   const loadDetail = useCallback(() => {
     if (agentSpecName) {
@@ -239,6 +242,7 @@ export default function AgentSpecDetailPage() {
     const suggestedVersion = suggestNextVersionFromBase(basedOnVersion);
     setCreateDraftFromVersion(basedOnVersion);
     setCreateDraftTargetVersion(suggestedVersion);
+    setCreateDraftCommitMsg('');
     setCreateDraftDialogOpen(true);
   };
 
@@ -256,9 +260,11 @@ export default function AgentSpecDetailPage() {
         agentSpecName,
         basedOnVersion: createDraftFromVersion,
         targetVersion: targetVersion || undefined,
+        commitMsg: createDraftCommitMsg.trim() || undefined,
       });
       toast.success(t('agentSpec.createDraftSuccess'));
       setCreateDraftDialogOpen(false);
+      setCreateDraftCommitMsg('');
       await loadDetail();
       const updated = useAgentSpecStore.getState().currentDetail;
       if (updated?.editingVersion) {
@@ -336,6 +342,8 @@ export default function AgentSpecDetailPage() {
       setEditResources(Object.fromEntries(resEntries));
       setEditContent(doc?.content || '{}');
       setEditVirtualFolders(new Set());
+      const versionRow = currentDetail?.versions?.find((item) => item.version === version);
+      setDraftCommitMsg(versionRow?.commitMsg?.trim() ? versionRow.commitMsg : '');
       setIsEditingDraft(true);
     } catch {
       await loadDetail();
@@ -501,11 +509,13 @@ export default function AgentSpecDetailPage() {
     setEditResources({ ...resourcesWithoutAgents });
     setEditContent(spec.content || '{}');
     setEditVirtualFolders(new Set());
+    setDraftCommitMsg(currentVersionSummary?.commitMsg?.trim() ? currentVersionSummary.commitMsg : '');
     setIsEditingDraft(true);
   };
 
   const handleCancelEdit = () => {
     setIsEditingDraft(false);
+    setDraftCommitMsg('');
   };
 
   const handleSaveDraft = async () => {
@@ -538,9 +548,14 @@ export default function AgentSpecDetailPage() {
         resource: fullResource,
       });
 
-      await agentSpecApi.updateDraft({ namespaceId, agentSpecCard });
+      await agentSpecApi.updateDraft({
+        namespaceId,
+        agentSpecCard,
+        commitMsg: draftCommitMsg.trim() || undefined,
+      });
       toast.success(t('agentSpec.draftSaveSuccess'));
       setIsEditingDraft(false);
+      setDraftCommitMsg('');
       await loadDetail();
       if (selectedVersion) {
         const response = await agentSpecApi.getVersion({ namespaceId, agentSpecName, version: selectedVersion });
@@ -1260,7 +1275,37 @@ export default function AgentSpecDetailPage() {
                     {currentVersionSummary && (
                       <InfoCell compact label={t('agentSpec.versionDownloads')} value={String(currentVersionSummary.downloadCount ?? 0)} icon={<Package className="h-3.5 w-3.5" />} />
                     )}
+                    {(currentVersionSummary || isEditingDraft) && (
+                      <InfoCell
+                        compact
+                        colSpan={2}
+                        label={t('agentSpec.commitMsg')}
+                        value={
+                          isEditingDraft ? (
+                            <Textarea
+                              value={draftCommitMsg}
+                              onChange={(e) => setDraftCommitMsg(e.target.value)}
+                              placeholder={t('agentSpec.commitMsgPlaceholder')}
+                              className="mt-0.5 min-h-[64px] max-w-full resize-y text-xs font-normal"
+                              disabled={draftSaving}
+                            />
+                          ) : (
+                            <span className="text-xs font-normal font-sans text-muted-foreground whitespace-pre-wrap">
+                              {currentVersionSummary?.commitMsg?.trim()
+                                ? currentVersionSummary.commitMsg
+                                : '-'}
+                            </span>
+                          )
+                        }
+                        icon={<MessageSquare className="h-3.5 w-3.5" />}
+                      />
+                    )}
                   </div>
+                  {isEditingDraft && (
+                    <p className="border-t border-border px-4 py-2 text-[11px] text-muted-foreground leading-relaxed">
+                      {t('agentSpec.commitMsgHint')}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1501,7 +1546,15 @@ export default function AgentSpecDetailPage() {
       </Dialog>
 
       {/* ===== Create Draft Version Dialog ===== */}
-      <Dialog open={createDraftDialogOpen} onOpenChange={setCreateDraftDialogOpen}>
+      <Dialog
+        open={createDraftDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDraftDialogOpen(open);
+          if (!open) {
+            setCreateDraftCommitMsg('');
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('agentSpec.createDraftFrom')}</DialogTitle>
@@ -1519,10 +1572,29 @@ export default function AgentSpecDetailPage() {
               disabled={actionLoading}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="create-draft-commit-msg" className="text-xs text-muted-foreground">
+              {t('agentSpec.commitMsg')}
+            </Label>
+            <Textarea
+              id="create-draft-commit-msg"
+              value={createDraftCommitMsg}
+              onChange={(e) => setCreateDraftCommitMsg(e.target.value)}
+              placeholder={t('agentSpec.commitMsgPlaceholder')}
+              className="text-sm min-h-[72px] resize-y"
+              disabled={actionLoading}
+            />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {t('agentSpec.commitMsgHint')}
+            </p>
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setCreateDraftDialogOpen(false)}
+              onClick={() => {
+                setCreateDraftDialogOpen(false);
+                setCreateDraftCommitMsg('');
+              }}
               disabled={actionLoading}
             >
               {t('common.cancel')}
@@ -1543,14 +1615,22 @@ function InfoCell({
   value,
   icon,
   compact = false,
+  colSpan,
 }: {
   label: string;
   value: React.ReactNode;
   icon?: React.ReactNode;
   compact?: boolean;
+  colSpan?: number;
 }) {
   return (
-    <div className={cn('flex items-center gap-3 px-5 py-3', compact && 'gap-2.5 px-4 py-2.5')}>
+    <div
+      className={cn(
+        'flex items-center gap-3 px-5 py-3',
+        compact && 'gap-2.5 px-4 py-2.5',
+        colSpan === 2 && 'col-span-2',
+      )}
+    >
       {icon && (
         <span className="text-muted-foreground/60 shrink-0">{icon}</span>
       )}

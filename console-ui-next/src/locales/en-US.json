@@ -1078,7 +1078,10 @@
     "dragOrClick": "Click to select a .zip file",
     "cancelEdit": "Cancel",
     "saveDraft": "Save Draft",
-    "draftSaveSuccess": "Draft saved"
+    "draftSaveSuccess": "Draft saved",
+    "commitMsg": "Version commit message",
+    "commitMsgPlaceholder": "Optional: describe what changed in this draft version",
+    "commitMsgHint": "This is stored on the draft version only (shown in version history). It is not the AgentSpec description above."
   },
   "skill": {
     "title": "Skill Management",

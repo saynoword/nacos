@@ -10,6 +10,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Upload } from 'lucide-react';
 import { agentSpecApi } from '@/api/agentspec';
 import { isValidZipFile } from './upload-utils';
@@ -29,12 +31,14 @@ export function UploadAgentSpecDialog({
 }: UploadAgentSpecDialogProps) {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
+  const [commitMsg, setCommitMsg] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = useCallback(() => {
     setFile(null);
+    setCommitMsg('');
     setError(null);
     setLoading(false);
   }, []);
@@ -65,7 +69,7 @@ export function UploadAgentSpecDialog({
     if (!file) return;
     setLoading(true);
     try {
-      await agentSpecApi.upload(namespaceId, file);
+      await agentSpecApi.upload(namespaceId, file, commitMsg);
       toast.success(t('agentSpec.uploadSuccess'));
       handleClose(false);
       onSuccess();
@@ -76,7 +80,7 @@ export function UploadAgentSpecDialog({
     } finally {
       setLoading(false);
     }
-  }, [file, namespaceId, t, handleClose, onSuccess]);
+  }, [file, commitMsg, namespaceId, t, handleClose, onSuccess]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -106,6 +110,19 @@ export function UploadAgentSpecDialog({
               className="hidden"
               onChange={handleFileChange}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="agentspec-upload-commit-msg">{t('agentSpec.commitMsg')}</Label>
+            <Textarea
+              id="agentspec-upload-commit-msg"
+              value={commitMsg}
+              onChange={(e) => setCommitMsg(e.target.value)}
+              placeholder={t('agentSpec.commitMsgPlaceholder')}
+              rows={2}
+              className="text-sm resize-y"
+            />
+            <p className="text-xs text-muted-foreground">{t('agentSpec.commitMsgHint')}</p>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

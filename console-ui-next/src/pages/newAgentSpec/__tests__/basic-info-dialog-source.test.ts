@@ -8,26 +8,29 @@ const SOURCE = fs.readFileSync(
 );
 
 describe('AgentSpec editor basic info dialog source', () => {
-  it('includes label editing in the basic info dialog and persists labels on save', () => {
+  it('includes basic info editing and persists labels on save', () => {
     expect(SOURCE).toContain("const [labels, setLabels] = useState<Record<string, string>>({});");
+    expect(SOURCE).toContain("const [draftLabels, setDraftLabels] = useState<Record<string, string>>({});");
     expect(SOURCE).toContain("const [description, setDescription] = useState('');");
+    expect(SOURCE).toContain("const [commitMsg, setCommitMsg] = useState('');");
     expect(SOURCE).toContain('syncManifestDescription');
     expect(SOURCE).toContain('<Textarea');
     expect(SOURCE).toContain("placeholder={t('agentSpec.descriptionPlaceholder')}");
+    expect(SOURCE).toContain("placeholder={t('agentSpec.commitMsgPlaceholder')}");
     expect(SOURCE).toContain('setDescription(trimmedDescription);');
+    expect(SOURCE).toContain('setCommitMsg(trimmedCommitMsg);');
     expect(SOURCE).toContain('content: syncManifestDescription(manifestFile.content, trimmedDescription),');
-    expect(SOURCE).toContain('<LabelEditor');
-    expect(SOURCE).toContain("showSaveButton={false}");
+    expect(SOURCE).toContain('setLabels(draftLabels);');
     expect(SOURCE).toContain('await agentSpecApi.updateLabels({');
   });
 
-  it('supports save-and-publish by saving the draft and then submitting it for review', () => {
+  it('persists draft content and commit message on save', () => {
     expect(SOURCE).toContain("const [draftVersion, setDraftVersion] = useState('');");
     expect(SOURCE).toContain('const persistDraft = useCallback(async (showSaveToast = true) => {');
     expect(SOURCE).toContain('description,');
+    expect(SOURCE).toContain('commitMsg: commitMsg.trim() || undefined,');
     expect(SOURCE).toContain('content: syncManifestDescription(manifestFile.content, description),');
-    expect(SOURCE).toContain('await agentSpecApi.submit({');
-    expect(SOURCE).toContain("t('agentSpec.saveAndPublish')");
+    expect(SOURCE).toContain('navigate(`/agentspec/${encodeURIComponent(result.name)}`);');
   });
 
   it('keeps description state in sync with manifest.json edits', () => {

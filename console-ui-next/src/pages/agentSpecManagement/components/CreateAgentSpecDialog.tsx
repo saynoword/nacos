@@ -32,6 +32,7 @@ export function CreateAgentSpecDialog({
 
   const [agentSpecName, setAgentSpecName] = useState('');
   const [description, setDescription] = useState('');
+  const [createCommitMsg, setCreateCommitMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +41,7 @@ export function CreateAgentSpecDialog({
       if (!nextOpen) {
         setAgentSpecName('');
         setDescription('');
+        setCreateCommitMsg('');
         setError(null);
         setLoading(false);
       }
@@ -67,7 +69,11 @@ export function CreateAgentSpecDialog({
         content: '',
         resource: {},
       });
-      await agentSpecApi.updateDraft({ namespaceId, agentSpecCard });
+      await agentSpecApi.updateDraft({
+        namespaceId,
+        agentSpecCard,
+        commitMsg: createCommitMsg.trim() || undefined,
+      });
       toast.success(t('agentSpec.createSuccess'));
       handleClose(false);
       onSuccess(trimmedName);
@@ -77,7 +83,7 @@ export function CreateAgentSpecDialog({
     } finally {
       setLoading(false);
     }
-  }, [agentSpecName, description, namespaceId, t, handleClose, onSuccess]);
+  }, [agentSpecName, description, createCommitMsg, namespaceId, t, handleClose, onSuccess]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -114,6 +120,22 @@ export function CreateAgentSpecDialog({
               }}
               className="min-h-24 resize-y"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="agentspec-create-commit-msg">{t('agentSpec.commitMsg')}</Label>
+            <Textarea
+              id="agentspec-create-commit-msg"
+              placeholder={t('agentSpec.commitMsgPlaceholder')}
+              value={createCommitMsg}
+              onChange={(e) => {
+                setCreateCommitMsg(e.target.value);
+                setError(null);
+              }}
+              rows={2}
+              className="text-sm resize-y"
+            />
+            <p className="text-xs text-muted-foreground">{t('agentSpec.commitMsgHint')}</p>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

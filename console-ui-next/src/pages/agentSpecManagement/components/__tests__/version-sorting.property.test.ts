@@ -20,7 +20,7 @@ const arbVersionSummary: fc.Arbitrary<AgentSpecVersionSummary> = fc.record({
   version: fc.string({ minLength: 1, maxLength: 20 }),
   status: fc.constantFrom(...STATUSES),
   author: fc.string({ maxLength: 20 }),
-  description: fc.string({ maxLength: 50 }),
+  commitMsg: fc.string({ maxLength: 50 }),
   createTime: fc.nat({ max: 2_000_000_000_000 }),
   updateTime: fc.nat({ max: 2_000_000_000_000 }),
   publishPipelineInfo: fc.constantFrom(null, 'pipeline-1', 'pipeline-2'),

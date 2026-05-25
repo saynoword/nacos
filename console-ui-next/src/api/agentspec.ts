@@ -37,10 +37,13 @@ export const agentSpecApi = {
     client.delete(BASE, { params }) as ApiResult<string>,
 
   /** 上传 zip */
-  upload: (namespaceId: string, file: File): ApiResult<string> => {
+  upload: (namespaceId: string, file: File, commitMsg?: string): ApiResult<string> => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', file, file.name);
     formData.append('namespaceId', namespaceId);
+    if (commitMsg?.trim()) {
+      formData.append('commitMsg', commitMsg.trim());
+    }
     return client.post(`${BASE}/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
@@ -53,6 +56,8 @@ export const agentSpecApi = {
     agentSpecName: string;
     basedOnVersion?: string;
     targetVersion?: string;
+    /** Version-level commit message (optional; not the AgentSpec description) */
+    commitMsg?: string;
   }): ApiResult<string> =>
     client.post(`${BASE}/draft`, params) as ApiResult<string>,
 
@@ -61,6 +66,8 @@ export const agentSpecApi = {
     namespaceId?: string;
     agentSpecCard: string;
     setAsLatest?: boolean;
+    /** Version-level commit message (optional; not the AgentSpec description) */
+    commitMsg?: string;
   }): ApiResult<string> =>
     client.put(`${BASE}/draft`, data) as ApiResult<string>,
 

@@ -205,9 +205,9 @@ export function VersionTimeline({
                   </span>
                 </div>
 
-                {v.description && (
+                {v.commitMsg && (
                   <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                    {v.description}
+                    {v.commitMsg}
                   </p>
                 )}
 

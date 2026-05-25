@@ -24,7 +24,7 @@ export interface AgentSpecVersionSummary {
   version: string;
   status: AgentSpecVersionStatus;
   author: string;
-  description: string;
+  commitMsg: string;
   createTime: number;
   updateTime: number;
   publishPipelineInfo: string | null;

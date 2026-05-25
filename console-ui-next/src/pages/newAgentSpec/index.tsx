@@ -109,6 +109,8 @@ export default function NewAgentSpecPage() {
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
   const [draftAgentSpecName, setDraftAgentSpecName] = useState(editName);
   const [draftDescription, setDraftDescription] = useState('');
+  const [commitMsg, setCommitMsg] = useState('');
+  const [draftCommitMsg, setDraftCommitMsg] = useState('');
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [draftLabels, setDraftLabels] = useState<Record<string, string>>({});
   const [savedLabels, setSavedLabels] = useState<Record<string, string>>({});
@@ -168,6 +170,8 @@ export default function NewAgentSpecPage() {
         if (cancelled) return;
 
         const spec = specRes.data;
+        const versionSummary = detail.versions?.find((item) => item.version === versionToLoad);
+        const nextCommitMsg = versionSummary?.commitMsg || '';
         const deserialized = deserializeToFiles(
           spec.content || '{}',
           spec.resource || {},
@@ -179,6 +183,8 @@ export default function NewAgentSpecPage() {
         setDraftAgentSpecName(spec.name);
         setDescription(nextDescription);
         setDraftDescription(nextDescription);
+        setCommitMsg(nextCommitMsg);
+        setDraftCommitMsg(nextCommitMsg);
         setDraftVersion(versionToLoad);
         setLabels(nextLabels);
         setDraftLabels(nextLabels);
@@ -203,9 +209,10 @@ export default function NewAgentSpecPage() {
     hasAutoOpenedInfoDialogRef.current = true;
     setDraftAgentSpecName(agentSpecName);
     setDraftDescription(description);
+    setDraftCommitMsg(commitMsg);
     setDraftLabels(labels);
     setInfoDialogOpen(true);
-  }, [mode, loaded, agentSpecName, description, labels]);
+  }, [mode, loaded, agentSpecName, description, commitMsg, labels]);
 
   // ===== Build file tree nodes from files map =====
   const treeNodes: FileTreeNode[] = useMemo(() => {
@@ -380,7 +387,7 @@ export default function NewAgentSpecPage() {
 
     setModified(true);
     setCreateNodeOpen(false);
-  }, [createNodeMode, createNodePath, createNodeType, files, folderExists, t]);
+  }, [createNodeFallbackType, createNodeMode, createNodePath, createNodeType, files, folderExists, t]);
 
   const handleDeleteNode = useCallback(
     (key: string, nodeType: 'file' | 'folder') => {
@@ -597,9 +604,10 @@ export default function NewAgentSpecPage() {
   const handleOpenInfoDialog = useCallback(() => {
     setDraftAgentSpecName(agentSpecName);
     setDraftDescription(description);
+    setDraftCommitMsg(commitMsg);
     setDraftLabels(labels);
     setInfoDialogOpen(true);
-  }, [agentSpecName, description, labels]);
+  }, [agentSpecName, description, commitMsg, labels]);
 
   const createNodePathPrefix = useMemo(() => {
     if (RESOURCE_TYPES.includes(createNodeType as (typeof RESOURCE_TYPES)[number])) {
@@ -640,6 +648,7 @@ export default function NewAgentSpecPage() {
   const handleSaveInfoDialog = useCallback(() => {
     const trimmedName = draftAgentSpecName.trim();
     const trimmedDescription = draftDescription.trim();
+    const trimmedCommitMsg = draftCommitMsg.trim();
     if (!trimmedName) {
       toast.error(t('agentSpec.nameRequired'));
       return;
@@ -647,10 +656,12 @@ export default function NewAgentSpecPage() {
     if (
       trimmedName !== agentSpecName
       || trimmedDescription !== description
+      || trimmedCommitMsg !== commitMsg
       || JSON.stringify(draftLabels) !== JSON.stringify(labels)
     ) {
       setAgentSpecName(trimmedName);
       setDescription(trimmedDescription);
+      setCommitMsg(trimmedCommitMsg);
       setFiles((prev) => {
         const next = new Map(prev);
         const manifestFile = next.get(MANIFEST_KEY);
@@ -666,7 +677,17 @@ export default function NewAgentSpecPage() {
       setModified(true);
     }
     setInfoDialogOpen(false);
-  }, [agentSpecName, description, draftAgentSpecName, draftDescription, draftLabels, labels, t]);
+  }, [
+    agentSpecName,
+    description,
+    commitMsg,
+    draftAgentSpecName,
+    draftDescription,
+    draftCommitMsg,
+    draftLabels,
+    labels,
+    t,
+  ]);
 
   const persistDraft = useCallback(async (showSaveToast = true) => {
     if (!agentSpecName.trim()) {
@@ -695,6 +716,7 @@ export default function NewAgentSpecPage() {
       const updateRes = await agentSpecApi.updateDraft({
         namespaceId,
         agentSpecCard,
+        commitMsg: commitMsg.trim() || undefined,
       });
       // Backend returns "ok", not the actual version — keep existing draftVersion
       const nextDraftVersion = draftVersion || updateRes.data;
@@ -721,7 +743,7 @@ export default function NewAgentSpecPage() {
       // axios interceptor handles error toast
       return null;
     }
-  }, [agentSpecName, description, draftVersion, files, labels, namespaceId, savedLabels, t]);
+  }, [agentSpecName, description, commitMsg, draftVersion, files, labels, namespaceId, savedLabels, t]);
 
   // ===== Save handler =====
   const handleSave = useCallback(async () => {
@@ -916,6 +938,17 @@ export default function NewAgentSpecPage() {
                 placeholder={t('agentSpec.descriptionPlaceholder')}
                 className="min-h-24 resize-y bg-transparent"
               />
+            </div>
+
+            <div className="space-y-2.5">
+              <Label className="text-sm font-medium">{t('agentSpec.commitMsg')}</Label>
+              <Textarea
+                value={draftCommitMsg}
+                onChange={(e) => setDraftCommitMsg(e.target.value)}
+                placeholder={t('agentSpec.commitMsgPlaceholder')}
+                className="min-h-20 resize-y bg-transparent"
+              />
+              <p className="text-xs text-muted-foreground">{t('agentSpec.commitMsgHint')}</p>
             </div>
           </div>
 
