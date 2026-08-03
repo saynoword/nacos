@@ -31,6 +31,7 @@ import com.alibaba.nacos.ai.service.repository.AiResourcePersistService;
 import com.alibaba.nacos.ai.service.repository.AiResourceVersionPersistService;
 import com.alibaba.nacos.ai.service.resource.AiResourceManager;
 import com.alibaba.nacos.ai.service.resource.PublishPipelineInfo;
+import com.alibaba.nacos.ai.utils.SkillZipParser;
 import com.alibaba.nacos.api.ai.model.skills.BatchUploadItemResult;
 import com.alibaba.nacos.api.ai.model.skills.BatchUploadResult;
 import com.alibaba.nacos.api.ai.model.skills.Skill;
@@ -38,6 +39,7 @@ import com.alibaba.nacos.api.ai.model.skills.SkillMeta;
 import com.alibaba.nacos.api.ai.model.skills.SkillResource;
 import com.alibaba.nacos.api.ai.model.skills.SkillSummary;
 import com.alibaba.nacos.api.ai.model.skills.SkillUploadPrecheckResult;
+import com.alibaba.nacos.api.ai.model.skills.SkillUtils;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.api.exception.api.NacosApiException;
 import com.alibaba.nacos.api.model.Page;
@@ -305,6 +307,34 @@ class SkillOperationServiceImplTest {
         verify(storage, times(1)).save(any(StorageKey.class), any(byte[].class));
         verify(aiResourceVersionPersistService).insert(argThat(inserted -> inserted != null
             && "test-skill".equals(inserted.getName()) && "3.0.6".equals(inserted.getVersion())));
+    }
+    
+    @Test
+    void testUploadSkillToOssAsSingleBundle() throws NacosException, IOException {
+        String namespaceId = "test-namespace";
+        System.setProperty(
+            com.alibaba.nacos.ai.constant.Constants.Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY,
+            "oss");
+        when(aiResourcePersistService.find(eq(namespaceId), anyString(), anyString()))
+            .thenReturn(null);
+        
+        String result = uploadSkill(namespaceId, createValidZipBytes());
+        
+        assertEquals("test-skill", result);
+        ArgumentCaptor<StorageKey> keyCaptor = ArgumentCaptor.forClass(StorageKey.class);
+        ArgumentCaptor<byte[]> contentCaptor = ArgumentCaptor.forClass(byte[].class);
+        verify(ossStorage).save(keyCaptor.capture(), contentCaptor.capture());
+        assertEquals("oss", keyCaptor.getValue().getProvider());
+        assertEquals("test-namespace/skill/test-skill/3.0.6/bundle.zip",
+            keyCaptor.getValue().getKey());
+        Skill stored = SkillZipParser.parseSkillFromZip(contentCaptor.getValue(), namespaceId);
+        assertEquals("test-skill", stored.getName());
+        verify(storage, never()).save(any(StorageKey.class), any(byte[].class));
+        verify(aiResourceVersionPersistService).insert(argThat(inserted -> inserted != null
+            && inserted.getStorage().contains("\"provider\":\"oss\"")
+            && inserted.getStorage().contains("\"format\":\"zip\"")
+            && inserted.getStorage().contains("\"artifactKey\":"
+                + "\"test-namespace/skill/test-skill/3.0.6/bundle.zip\"")));
     }
     
     @Test
@@ -2334,6 +2364,40 @@ class SkillOperationServiceImplTest {
     }
     
     @Test
+    void testGetSkillVersionDetailReadsOssBundle() throws Exception {
+        String namespaceId = "test-ns";
+        String skillName = "test-skill";
+        String version = "v1";
+        AiResource meta = new AiResource();
+        meta.setName(skillName);
+        meta.setType("skill");
+        meta.setStatus("enable");
+        meta.setScope(VisibilityConstants.SCOPE_PUBLIC);
+        when(aiResourcePersistService.find(eq(namespaceId), eq(skillName), anyString()))
+            .thenReturn(meta);
+        com.alibaba.nacos.ai.model.AiResourceVersion vRow =
+            new com.alibaba.nacos.ai.model.AiResourceVersion();
+        vRow.setVersion(version);
+        vRow.setStorage("{\"provider\":\"oss\",\"format\":\"zip\","
+            + "\"artifactKey\":\"test-ns/skill/test-skill/v1/bundle.zip\","
+            + "\"files\":[\"SKILL.md\"]}");
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
+            eq(version))).thenReturn(vRow);
+        Skill stored = new Skill();
+        stored.setName(skillName);
+        stored.setDescription("desc");
+        stored.setSkillMd("---\nname: test-skill\ndescription: desc\n---\n\nbody");
+        when(ossStorage.get(any(StorageKey.class))).thenReturn(SkillUtils.toZipBytes(stored));
+        
+        Skill result = skillOperationService.getSkillVersionDetail(namespaceId, skillName, version);
+        
+        assertEquals(skillName, result.getName());
+        verify(ossStorage).get(argThat(key -> "oss".equals(key.getProvider())
+            && "test-ns/skill/test-skill/v1/bundle.zip".equals(key.getKey())));
+        verify(storage, never()).get(any(StorageKey.class));
+    }
+    
+    @Test
     void testGetSkillVersionDetailBlankVersionThrows() {
         String namespaceId = "test-ns";
         String skillName = "test-skill";
@@ -2428,6 +2492,46 @@ class SkillOperationServiceImplTest {
     }
     
     @Test
+    void testUpdateOssDraftOverwritesFixedBundle() throws NacosException {
+        String namespaceId = "test-ns";
+        String skillName = "my-skill";
+        System.setProperty(
+            com.alibaba.nacos.ai.constant.Constants.Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY,
+            "oss");
+        AiResource meta = new AiResource();
+        meta.setName(skillName);
+        meta.setType("skill");
+        meta.setNamespaceId(namespaceId);
+        meta.setStatus("enable");
+        meta.setMetaVersion(1L);
+        meta.setVersionInfo("{\"editingVersion\":\"v1\",\"labels\":{},\"onlineCnt\":0}");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(skillName), anyString()))
+            .thenReturn(meta);
+        com.alibaba.nacos.ai.model.AiResourceVersion vRow =
+            new com.alibaba.nacos.ai.model.AiResourceVersion();
+        vRow.setVersion("v1");
+        vRow.setStatus("draft");
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
+            eq("v1"))).thenReturn(vRow);
+        when(aiResourcePersistService.updateMetaCas(eq(namespaceId), eq(skillName), eq("skill"),
+            eq(1L), any())).thenReturn(true);
+        Skill draft = new Skill();
+        draft.setName(skillName);
+        draft.setDescription("updated desc");
+        draft.setSkillMd("---\nname: my-skill\ndescription: updated desc\n---\n\nbody");
+        
+        skillOperationService.updateDraft(namespaceId, draft, null);
+        
+        verify(ossStorage).save(argThat(key -> "oss".equals(key.getProvider())
+            && "test-ns/skill/my-skill/v1/bundle.zip".equals(key.getKey())),
+            any(byte[].class));
+        verify(storage, never()).save(any(StorageKey.class), any(byte[].class));
+        verify(aiResourceVersionPersistService).updateStorage(eq(namespaceId), eq(skillName),
+            anyString(), eq("v1"), argThat(storageJson -> storageJson.contains("\"format\":\"zip\"")
+                && storageJson.contains("test-ns/skill/my-skill/v1/bundle.zip")));
+    }
+    
+    @Test
     void testUpdateDraftNullSkillThrows() {
         NacosApiException ex = assertThrows(NacosApiException.class,
             () -> skillOperationService.updateDraft("ns", null, null));
@@ -2497,6 +2601,38 @@ class SkillOperationServiceImplTest {
         verify(aiResourceVersionPersistService).delete(eq(namespaceId), eq(skillName), anyString(),
             eq("v1"));
         verify(ossStorage).delete(argThat(key -> "oss".equals(key.getProvider())));
+        verify(storage, never()).delete(any(StorageKey.class));
+    }
+    
+    @Test
+    void testDeleteDraftDeletesOssBundle() throws NacosException {
+        String namespaceId = "test-ns";
+        String skillName = "my-skill";
+        AiResource meta = new AiResource();
+        meta.setName(skillName);
+        meta.setType("skill");
+        meta.setNamespaceId(namespaceId);
+        meta.setStatus("enable");
+        meta.setMetaVersion(1L);
+        meta.setVersionInfo("{\"editingVersion\":\"v1\",\"labels\":{},\"onlineCnt\":0}");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(skillName), anyString()))
+            .thenReturn(meta);
+        com.alibaba.nacos.ai.model.AiResourceVersion vRow =
+            new com.alibaba.nacos.ai.model.AiResourceVersion();
+        vRow.setVersion("v1");
+        vRow.setStatus("draft");
+        vRow.setStorage("{\"provider\":\"oss\",\"format\":\"zip\","
+            + "\"artifactKey\":\"test-ns/skill/my-skill/v1/bundle.zip\","
+            + "\"files\":[\"SKILL.md\"]}");
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
+            eq("v1"))).thenReturn(vRow);
+        when(aiResourcePersistService.updateMetaCas(eq(namespaceId), eq(skillName), eq("skill"),
+            eq(1L), any())).thenReturn(true);
+        
+        skillOperationService.deleteDraft(namespaceId, skillName);
+        
+        verify(ossStorage).delete(argThat(key -> "oss".equals(key.getProvider())
+            && "test-ns/skill/my-skill/v1/bundle.zip".equals(key.getKey())));
         verify(storage, never()).delete(any(StorageKey.class));
     }
     

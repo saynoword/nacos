@@ -149,6 +149,19 @@ class OssAiResourceStorageTest {
     }
     
     @Test
+    void shouldPreserveHierarchicalSkillBundleKey() throws Exception {
+        StorageKey bundleKey = new StorageKey(OssAiResourceStorage.TYPE,
+            "test-namespace/skill/test-skill/3.0.6/bundle.zip");
+        byte[] content = "bundle".getBytes(StandardCharsets.UTF_8);
+        
+        storage.save(bundleKey, content);
+        
+        verify(ossClient).putObject(eq(BUCKET),
+            eq("nacos/ai/test-namespace/skill/test-skill/3.0.6/bundle.zip"),
+            any(InputStream.class));
+    }
+    
+    @Test
     void shouldSaveNullAsEmptyContent() throws Exception {
         AtomicReference<byte[]> uploaded = new AtomicReference<>();
         doAnswer(invocation -> {

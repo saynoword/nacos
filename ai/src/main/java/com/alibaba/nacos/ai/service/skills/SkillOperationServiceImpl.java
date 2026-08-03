@@ -69,6 +69,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -107,6 +108,16 @@ public class SkillOperationServiceImpl implements SkillOperationService {
      * Default storage provider for skills when system config is not specified.
      */
     private static final String STORAGE_PROVIDER_NACOS_CONFIG = "nacos_config";
+    
+    private static final String STORAGE_PROVIDER_OSS = "oss";
+    
+    private static final String STORAGE_FORMAT_ZIP = "zip";
+    
+    private static final String STORAGE_KEY_FORMAT = "format";
+    
+    private static final String STORAGE_KEY_ARTIFACT = "artifactKey";
+    
+    private static final String SKILL_BUNDLE_FILE_NAME = "bundle.zip";
     
     /**
      * System config key for skill storage provider.
@@ -1630,7 +1641,13 @@ public class SkillOperationServiceImpl implements SkillOperationService {
     private static String buildStorageJson(String namespaceId, String skillName, String version,
         List<String> files, String contentMd5) {
         Map<String, Object> json = new LinkedHashMap<>(8);
-        json.put("provider", resolveSkillStorageProvider());
+        String provider = resolveSkillStorageProvider();
+        json.put("provider", provider);
+        if (STORAGE_PROVIDER_OSS.equals(provider)) {
+            json.put(STORAGE_KEY_FORMAT, STORAGE_FORMAT_ZIP);
+            json.put(STORAGE_KEY_ARTIFACT,
+                buildSkillBundleKey(namespaceId, skillName, version));
+        }
         json.put("scope", namespaceId + ":" + skillName + ":" + version);
         json.put("files", files);
         if (StringUtils.isNotBlank(contentMd5)) {
@@ -1675,6 +1692,29 @@ public class SkillOperationServiceImpl implements SkillOperationService {
             }
         }
         return STORAGE_PROVIDER_NACOS_CONFIG;
+    }
+    
+    private static boolean isZipStorage(String storageJson) {
+        return STORAGE_FORMAT_ZIP.equals(parseStorageString(storageJson, STORAGE_KEY_FORMAT));
+    }
+    
+    private static String parseStorageString(String storageJson, String key) {
+        if (StringUtils.isBlank(storageJson)) {
+            return null;
+        }
+        try {
+            Map<String, Object> map = JacksonUtils.toObj(storageJson, Map.class);
+            Object value = map.get(key);
+            return value instanceof String ? (String) value : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+    
+    private static String buildSkillBundleKey(String namespaceId, String skillName,
+        String version) {
+        return namespaceId + "/" + RESOURCE_TYPE_SKILL + "/" + skillName + "/" + version + "/"
+            + SKILL_BUNDLE_FILE_NAME;
     }
     
     /**
@@ -1749,6 +1789,28 @@ public class SkillOperationServiceImpl implements SkillOperationService {
         String provider = resolveSkillStorageProvider();
         String skillName = skill.getName();
         List<String> files = new ArrayList<>();
+        
+        if (STORAGE_PROVIDER_OSS.equals(provider)) {
+            files.add(SKILL_MD_RESOURCE_NAME);
+            if (skill.getResource() != null && !skill.getResource().isEmpty()) {
+                for (SkillResource resource : skill.getResource().values()) {
+                    if (resource != null) {
+                        files.add(buildResourceFilePath(resource));
+                    }
+                }
+            }
+            byte[] bundle;
+            try {
+                bundle = SkillUtils.toZipBytes(skill);
+            } catch (IOException e) {
+                throw new NacosException(NacosException.SERVER_ERROR,
+                    "Failed to build Skill bundle: " + skillName, e);
+            }
+            StorageKey bundleKey = new StorageKey(provider,
+                buildSkillBundleKey(namespaceId, skillName, version));
+            storageRouter.route(bundleKey).save(bundleKey, bundle);
+            return files;
+        }
         
         // Save concurrently to reduce latency when skill has multiple resource files.
         Executor executor = ExecutorUtils.getSkillStorageIoExecutor();
@@ -1846,13 +1908,27 @@ public class SkillOperationServiceImpl implements SkillOperationService {
     private Skill loadSkillFromStorage(String namespaceId, String skillName, String version,
         String storageJson)
         throws NacosException {
+        String provider = parseStorageProvider(storageJson);
+        if (isZipStorage(storageJson)) {
+            String artifactKey = parseStorageString(storageJson, STORAGE_KEY_ARTIFACT);
+            if (StringUtils.isBlank(artifactKey)) {
+                throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
+                    "No bundle found in storage for skill: " + skillName + "@" + version);
+            }
+            StorageKey key = new StorageKey(provider, artifactKey);
+            byte[] bundle = storageRouter.route(key).get(key);
+            if (bundle == null) {
+                throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
+                    "No bundle found in storage for skill: " + skillName + "@" + version);
+            }
+            return SkillZipParser.parseSkillFromZip(bundle, namespaceId);
+        }
         List<String> files = parseStorageFiles(storageJson);
         if (files == null || files.isEmpty()) {
             throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
                 "No files found in storage for skill: " + skillName + "@" + version);
         }
-        return loadSkillFromFiles(namespaceId, skillName, version,
-            parseStorageProvider(storageJson), files);
+        return loadSkillFromFiles(namespaceId, skillName, version, provider, files);
     }
     
     /**
@@ -1950,11 +2026,19 @@ public class SkillOperationServiceImpl implements SkillOperationService {
     private void deleteSkillStorageForVersion(String namespaceId, String skillName, String version,
         String storageJson)
         throws NacosException {
+        String provider = parseStorageProvider(storageJson);
+        if (isZipStorage(storageJson)) {
+            String artifactKey = parseStorageString(storageJson, STORAGE_KEY_ARTIFACT);
+            if (StringUtils.isNotBlank(artifactKey)) {
+                StorageKey key = new StorageKey(provider, artifactKey);
+                storageRouter.route(key).delete(key);
+            }
+            return;
+        }
         List<String> files = parseStorageFiles(storageJson);
         if (files == null || files.isEmpty()) {
             return;
         }
-        String provider = parseStorageProvider(storageJson);
         for (String filePath : files) {
             StorageKey key = NacosConfigAiResourceStorage.buildStorageKey(provider, namespaceId,
                 skillName, version,
