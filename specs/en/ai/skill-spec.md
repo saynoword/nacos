@@ -170,9 +170,9 @@ Skill file content is stored through AI storage. The default storage is
 
 Each version must persist its storage provider in the `ai_resource_version`
 storage descriptor. Reads and deletes must route through that persisted
-provider. The configured Skill storage provider controls new writes only and
-must not redirect existing versions. A legacy descriptor without `provider`
-belongs to `nacos_config`.
+provider. The effective AI Resource storage provider configuration controls new
+writes only and must not redirect existing versions. A legacy descriptor
+without `provider` belongs to `nacos_config`.
 
 When a newly written version selects the `oss` provider, the server must parse,
 validate, and normalize the Skill package before storing the complete Skill as

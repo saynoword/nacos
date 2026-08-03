@@ -117,20 +117,27 @@ AI 存储 provider 接入统一插件 state。禁用非 critical provider 后，
 插件管理查询，但 router 会拒绝该 provider 的新操作。内置 `ai-storage:nacos_config` 是默认
 后端，也是服务端 AI 能力依赖的 critical 插件；服务端仍依赖它时，不能通过插件管理将其禁用。
 
-以下属性为不同 AI 资源领域选择 provider：
+以下属性为所有 AI 资源领域的新写入统一选择 provider：
 
 ```properties
-nacos.ai.prompt.storage.provider=nacos_config
-nacos.ai.skill.storage.provider=nacos_config
-nacos.ai.agentspec.storage.provider=nacos_config
-nacos.ai.agent.storage.provider=nacos_config
+nacos.ai.storage.provider=nacos_config
 ```
 
-它们属于领域路由策略，不是 `ai-storage:nacos_config` 所拥有的私有配置 definitions。
+为兼容已有配置，以下领域属性继续有效：
 
-AI 模块 active 时，为 Prompt、Skill、AgentSpec、Agent 分别选择的所有 provider 都是该 critical
-路由类型的必需实现；同一 provider 可以同时满足多个领域。Nacos 启动成功前，每个去重后的
-选中 provider 都必须已被发现且处于 enabled 状态，另一个可用 provider 不能作为 fallback。
+```properties
+nacos.ai.prompt.storage.provider=
+nacos.ai.skill.storage.provider=
+nacos.ai.agentspec.storage.provider=
+nacos.ai.agent.storage.provider=
+```
+
+某个领域属性为非空时，优先于该领域的全局配置；两者都未配置时使用 `nacos_config`。这些属性
+属于领域路由策略，不是 `ai-storage:nacos_config` 所拥有的私有配置 definitions。
+
+AI 模块 active 时，按上述优先级计算出的每个实际生效 provider 都是该 critical 路由类型的
+必需实现。Nacos 启动成功前，每个去重后的选中 provider 都必须已被发现且处于 enabled 状态，
+另一个可用 provider 不能作为 fallback。
 AI 模块因 function mode 或 `nacos.extension.ai.enabled=false` 关闭时，AI storage 为 inactive，
 不产生启动约束。
 

@@ -1625,10 +1625,8 @@ public class SkillOperationServiceImpl implements SkillOperationService {
      * Resolve the storage provider from system config. Defaults to "nacos_config".
      */
     private static String resolveSkillStorageProvider() {
-        String provider =
-            EnvUtil.getProperty(Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY,
-                STORAGE_PROVIDER_NACOS_CONFIG);
-        return StringUtils.isBlank(provider) ? STORAGE_PROVIDER_NACOS_CONFIG : provider.trim();
+        return AiResourceStorageUtils.resolveProvider(Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY,
+            STORAGE_PROVIDER_NACOS_CONFIG);
     }
     
     /**

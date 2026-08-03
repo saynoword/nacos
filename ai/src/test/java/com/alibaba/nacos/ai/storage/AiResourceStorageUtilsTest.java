@@ -16,7 +16,13 @@
 
 package com.alibaba.nacos.ai.storage;
 
+import com.alibaba.nacos.ai.constant.Constants;
+import com.alibaba.nacos.sys.env.EnvUtil;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.StandardEnvironment;
 
 import java.nio.charset.StandardCharsets;
 
@@ -24,6 +30,47 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class AiResourceStorageUtilsTest {
+    
+    private static final ConfigurableEnvironment CACHED_ENVIRONMENT = EnvUtil.getEnvironment();
+    
+    @BeforeEach
+    void setUp() {
+        EnvUtil.setEnvironment(new StandardEnvironment());
+    }
+    
+    @AfterEach
+    void tearDown() {
+        System.clearProperty(Constants.AI_STORAGE_PROVIDER_CONFIG_KEY);
+        System.clearProperty(Constants.Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY);
+        EnvUtil.setEnvironment(CACHED_ENVIRONMENT);
+    }
+    
+    @Test
+    void testResolveProviderUsesGlobalConfiguration() {
+        System.setProperty(Constants.AI_STORAGE_PROVIDER_CONFIG_KEY, " oss ");
+        
+        assertEquals("oss", AiResourceStorageUtils.resolveProvider(
+            Constants.Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY,
+            NacosConfigAiResourceStorage.TYPE));
+    }
+    
+    @Test
+    void testResolveProviderPrefersResourceCompatibilityConfiguration() {
+        System.setProperty(Constants.AI_STORAGE_PROVIDER_CONFIG_KEY, "oss");
+        System.setProperty(Constants.Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY, "legacy-store");
+        
+        assertEquals("legacy-store", AiResourceStorageUtils.resolveProvider(
+            Constants.Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY,
+            NacosConfigAiResourceStorage.TYPE));
+    }
+    
+    @Test
+    void testResolveProviderUsesDefault() {
+        assertEquals(NacosConfigAiResourceStorage.TYPE,
+            AiResourceStorageUtils.resolveProvider(
+                Constants.Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY,
+                NacosConfigAiResourceStorage.TYPE));
+    }
     
     @Test
     void testBuildBundleKeyEncodesEachPathSegment() {

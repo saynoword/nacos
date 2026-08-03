@@ -53,7 +53,6 @@ import com.alibaba.nacos.plugin.ai.pipeline.model.ResourceFileContent;
 import com.alibaba.nacos.plugin.ai.storage.AiResourceStorageRouter;
 import com.alibaba.nacos.plugin.ai.storage.model.StorageKey;
 import com.alibaba.nacos.plugin.visibility.constant.VisibilityConstants;
-import com.alibaba.nacos.sys.env.EnvUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -1124,10 +1123,9 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
      * Resolve the storage provider from system config. Defaults to "nacos_config".
      */
     private static String resolveStorageProvider() {
-        String provider =
-            EnvUtil.getProperty(Constants.AgentSpecs.AGENTSPEC_STORAGE_PROVIDER_CONFIG_KEY,
-                STORAGE_PROVIDER_NACOS_CONFIG);
-        return StringUtils.isBlank(provider) ? STORAGE_PROVIDER_NACOS_CONFIG : provider.trim();
+        return AiResourceStorageUtils.resolveProvider(
+            Constants.AgentSpecs.AGENTSPEC_STORAGE_PROVIDER_CONFIG_KEY,
+            STORAGE_PROVIDER_NACOS_CONFIG);
     }
     
     /**

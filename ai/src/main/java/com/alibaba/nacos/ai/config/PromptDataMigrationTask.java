@@ -498,9 +498,8 @@ public class PromptDataMigrationTask implements ApplicationListener<ApplicationR
     }
     
     private static String resolveStorageProvider() {
-        String provider =
-            EnvUtil.getProperty(Constants.Prompt.PROMPT_STORAGE_PROVIDER_CONFIG_KEY,
-                STORAGE_PROVIDER_NACOS_CONFIG);
-        return StringUtils.isBlank(provider) ? STORAGE_PROVIDER_NACOS_CONFIG : provider.trim();
+        return AiResourceStorageUtils.resolveProvider(
+            Constants.Prompt.PROMPT_STORAGE_PROVIDER_CONFIG_KEY,
+            STORAGE_PROVIDER_NACOS_CONFIG);
     }
 }

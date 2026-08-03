@@ -16,6 +16,10 @@
 
 package com.alibaba.nacos.ai.storage;
 
+import com.alibaba.nacos.ai.constant.Constants;
+import com.alibaba.nacos.common.utils.StringUtils;
+import com.alibaba.nacos.sys.env.EnvUtil;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,7 +33,7 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Utilities for AI resource ZIP artifacts.
+ * Utilities for AI resource storage.
  *
  * @author nacos
  */
@@ -44,6 +48,23 @@ public final class AiResourceStorageUtils {
     public static final String BUNDLE_FILE_NAME = "bundle.zip";
     
     private AiResourceStorageUtils() {
+    }
+    
+    /**
+     * Resolve the storage provider for new writes. A resource-specific property takes precedence
+     * for compatibility, followed by the global AI storage property.
+     *
+     * @param resourcePropertyKey resource-specific compatibility property
+     * @param defaultProvider default provider
+     * @return resolved provider
+     */
+    public static String resolveProvider(String resourcePropertyKey, String defaultProvider) {
+        String provider = EnvUtil.getProperty(resourcePropertyKey);
+        if (StringUtils.isBlank(provider)) {
+            provider = EnvUtil.getProperty(Constants.AI_STORAGE_PROVIDER_CONFIG_KEY,
+                defaultProvider);
+        }
+        return StringUtils.isBlank(provider) ? defaultProvider : provider.trim();
     }
     
     /**
