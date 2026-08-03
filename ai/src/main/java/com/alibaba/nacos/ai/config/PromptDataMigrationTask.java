@@ -22,6 +22,7 @@ import com.alibaba.nacos.ai.model.AiResourceVersion;
 import com.alibaba.nacos.ai.service.prompt.PromptOperationService;
 import com.alibaba.nacos.ai.service.repository.AiResourcePersistService;
 import com.alibaba.nacos.ai.service.repository.AiResourceVersionPersistService;
+import com.alibaba.nacos.ai.storage.AiResourceStorageUtils;
 import com.alibaba.nacos.ai.storage.NacosConfigAiResourceStorage;
 import com.alibaba.nacos.api.ai.model.prompt.PromptUtils;
 import com.alibaba.nacos.api.ai.model.prompt.PromptVersionInfo;
@@ -47,11 +48,13 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -363,7 +366,7 @@ public class PromptDataMigrationTask implements ApplicationListener<ApplicationR
         versionInfo.setMd5(md5);
         
         // Write to typed storage FIRST (idempotent overwrite)
-        writeToTypedStorage(namespace, promptKey, version, versionInfo);
+        String storageJson = writeToTypedStorage(namespace, promptKey, version, versionInfo);
         
         // Then create DB record (idempotent: skip if exists)
         AiResourceVersion existing = aiResourceVersionPersistService.find(namespace, promptKey,
@@ -382,7 +385,7 @@ public class PromptDataMigrationTask implements ApplicationListener<ApplicationR
         versionRecord.setAuthor(versionInfo.getSrcUser() != null ? versionInfo.getSrcUser() : "-");
         versionRecord.setDesc(versionInfo.getCommitMsg() != null ? versionInfo.getCommitMsg()
             : "migrated from legacy config");
-        versionRecord.setStorage(buildStorageJson(namespace, promptKey, version));
+        versionRecord.setStorage(storageJson);
         
         try {
             aiResourceVersionPersistService.insert(versionRecord);
@@ -455,19 +458,40 @@ public class PromptDataMigrationTask implements ApplicationListener<ApplicationR
         }
     }
     
-    private void writeToTypedStorage(String namespace, String promptKey, String version,
+    private String writeToTypedStorage(String namespace, String promptKey, String version,
         PromptVersionInfo versionInfo) throws NacosException {
         String provider = resolveStorageProvider();
         byte[] contentBytes = JacksonUtils.toJson(versionInfo).getBytes(StandardCharsets.UTF_8);
-        StorageKey storageKey = NacosConfigAiResourceStorage.buildStorageKey(provider, namespace,
-            NacosConfigAiResourceStorage.RESOURCE_TYPE_PROMPT, promptKey, version,
-            PromptUtils.PROMPT_MAIN_DATA_ID);
+        StorageKey storageKey;
+        String artifactKey = null;
+        if (AiResourceStorageUtils.OSS_PROVIDER.equals(provider)) {
+            artifactKey = AiResourceStorageUtils.buildBundleKey(namespace, RESOURCE_TYPE_PROMPT,
+                promptKey, version);
+            try {
+                contentBytes = AiResourceStorageUtils.zipSingleEntry(
+                    PromptUtils.PROMPT_MAIN_DATA_ID, contentBytes);
+            } catch (IOException e) {
+                throw new NacosException(NacosException.SERVER_ERROR,
+                    "Failed to build Prompt bundle: " + promptKey + "@" + version, e);
+            }
+            storageKey = new StorageKey(provider, artifactKey);
+        } else {
+            storageKey = NacosConfigAiResourceStorage.buildStorageKey(provider, namespace,
+                NacosConfigAiResourceStorage.RESOURCE_TYPE_PROMPT, promptKey, version,
+                PromptUtils.PROMPT_MAIN_DATA_ID);
+        }
         AiResourceStorageRouter.getInstance().route(storageKey).save(storageKey, contentBytes);
+        return buildStorageJson(namespace, promptKey, version, provider, artifactKey);
     }
     
-    private static String buildStorageJson(String namespace, String promptKey, String version) {
-        Map<String, Object> json = new HashMap<>(4);
-        json.put("provider", resolveStorageProvider());
+    private static String buildStorageJson(String namespace, String promptKey, String version,
+        String provider, String artifactKey) {
+        Map<String, Object> json = new LinkedHashMap<>(6);
+        json.put("provider", provider);
+        if (AiResourceStorageUtils.OSS_PROVIDER.equals(provider)) {
+            json.put("format", AiResourceStorageUtils.ZIP_FORMAT);
+            json.put("artifactKey", artifactKey);
+        }
         json.put("scope", namespace + ":" + promptKey + ":" + version);
         json.put("files", Collections.singletonList(PromptUtils.PROMPT_MAIN_DATA_ID));
         return JacksonUtils.toJson(json);

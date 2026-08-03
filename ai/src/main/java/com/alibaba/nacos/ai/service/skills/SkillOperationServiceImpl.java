@@ -35,6 +35,7 @@ import com.alibaba.nacos.ai.service.repository.QueryCondition;
 import com.alibaba.nacos.ai.service.resource.AiResourceManager;
 import com.alibaba.nacos.ai.service.resource.ResourceVersionInfo;
 import com.alibaba.nacos.ai.service.trace.AiResourceTraceService;
+import com.alibaba.nacos.ai.storage.AiResourceStorageUtils;
 import com.alibaba.nacos.ai.storage.NacosConfigAiResourceStorage;
 import com.alibaba.nacos.ai.utils.ExecutorUtils;
 import com.alibaba.nacos.ai.utils.SkillContentDigestUtils;
@@ -116,8 +117,6 @@ public class SkillOperationServiceImpl implements SkillOperationService {
     private static final String STORAGE_KEY_FORMAT = "format";
     
     private static final String STORAGE_KEY_ARTIFACT = "artifactKey";
-    
-    private static final String SKILL_BUNDLE_FILE_NAME = "bundle.zip";
     
     /**
      * System config key for skill storage provider.
@@ -1713,8 +1712,8 @@ public class SkillOperationServiceImpl implements SkillOperationService {
     
     private static String buildSkillBundleKey(String namespaceId, String skillName,
         String version) {
-        return namespaceId + "/" + RESOURCE_TYPE_SKILL + "/" + skillName + "/" + version + "/"
-            + SKILL_BUNDLE_FILE_NAME;
+        return AiResourceStorageUtils.buildBundleKey(namespaceId, RESOURCE_TYPE_SKILL, skillName,
+            version);
     }
     
     /**

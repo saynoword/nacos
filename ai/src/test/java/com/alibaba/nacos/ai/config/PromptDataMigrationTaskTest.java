@@ -23,6 +23,7 @@ import com.alibaba.nacos.ai.model.AiResourceVersion;
 import com.alibaba.nacos.ai.service.prompt.PromptOperationService;
 import com.alibaba.nacos.ai.service.repository.AiResourcePersistService;
 import com.alibaba.nacos.ai.service.repository.AiResourceVersionPersistService;
+import com.alibaba.nacos.ai.storage.AiResourceStorageUtils;
 import com.alibaba.nacos.ai.utils.PromptDataIdUtils;
 import com.alibaba.nacos.api.ai.model.prompt.PromptVersionInfo;
 import com.alibaba.nacos.api.model.Page;
@@ -45,6 +46,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -117,6 +119,9 @@ class PromptDataMigrationTaskTest {
     private AiResourceStorage storage;
     
     @Mock
+    private AiResourceStorage ossStorage;
+    
+    @Mock
     private NamespaceOperationService namespaceOperationService;
     
     private PromptDataMigrationTask task;
@@ -131,7 +136,9 @@ class PromptDataMigrationTaskTest {
         EnvUtil.setEnvironment(new StandardEnvironment());
         AiResourceStorageRouter.reset();
         lenient().when(storage.type()).thenReturn("nacos_config");
+        lenient().when(ossStorage.type()).thenReturn("oss");
         AiResourceStorageRouter.join(storage);
+        AiResourceStorageRouter.join(ossStorage);
         initTaskWithDefaultNamespace();
     }
     
@@ -165,6 +172,7 @@ class PromptDataMigrationTaskTest {
         EnvUtil.setEnvironment(CACHED_ENVIRONMENT);
         System.clearProperty("nacos.ai.prompt.migration.enabled");
         System.clearProperty("nacos.ai.prompt.migration.provider");
+        System.clearProperty("nacos.ai.prompt.storage.provider");
         AiResourceStorageRouter.reset();
     }
     
@@ -263,6 +271,7 @@ class PromptDataMigrationTaskTest {
     
     @Test
     void testShouldAcquireMarkerAndMigratePromptSuccessfully() throws Exception {
+        System.setProperty("nacos.ai.prompt.storage.provider", "oss");
         // 1. Scan returns one descriptor dataId
         Page<ConfigInfo> scanPage = buildScanPage(PROMPT_KEY);
         when(configInfoPersistService.findConfigInfo4Page(eq(1), eq(100), any(), eq(PROMPT_GROUP),
@@ -328,10 +337,24 @@ class PromptDataMigrationTaskTest {
         // Verify: meta record inserted
         verify(aiResourcePersistService, timeout(ASYNC_TIMEOUT)).insert(any(AiResource.class));
         // Verify: version record inserted
+        ArgumentCaptor<AiResourceVersion> versionCaptor =
+            ArgumentCaptor.forClass(AiResourceVersion.class);
         verify(aiResourceVersionPersistService, timeout(ASYNC_TIMEOUT))
-            .insert(any(AiResourceVersion.class));
-        // Verify: content written to typed storage
-        verify(storage, timeout(ASYNC_TIMEOUT)).save(any(StorageKey.class), any(byte[].class));
+            .insert(versionCaptor.capture());
+        assertTrue(versionCaptor.getValue().getStorage().contains("\"provider\":\"oss\""));
+        assertTrue(versionCaptor.getValue().getStorage().contains("\"format\":\"zip\""));
+        // Verify: content written to one OSS bundle
+        ArgumentCaptor<StorageKey> keyCaptor = ArgumentCaptor.forClass(StorageKey.class);
+        ArgumentCaptor<byte[]> bundleCaptor = ArgumentCaptor.forClass(byte[].class);
+        verify(ossStorage, timeout(ASYNC_TIMEOUT)).save(keyCaptor.capture(),
+            bundleCaptor.capture());
+        assertEquals("public/prompt/test-prompt/0.0.1/bundle.zip",
+            keyCaptor.getValue().getKey());
+        PromptVersionInfo stored = JacksonUtils.toObj(
+            AiResourceStorageUtils.readSingleEntry(bundleCaptor.getValue(), "content.json"),
+            PromptVersionInfo.class);
+        assertEquals("Hello {{name}}", stored.getTemplate());
+        verify(storage, never()).save(any(StorageKey.class), any(byte[].class));
         // Verify: legacy mirror refreshed
         verify(promptOperationService, timeout(ASYNC_TIMEOUT)).refreshLatestMirror(NS, PROMPT_KEY);
         // Verify: marker released

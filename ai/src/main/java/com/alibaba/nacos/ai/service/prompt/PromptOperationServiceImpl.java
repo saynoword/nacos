@@ -34,6 +34,7 @@ import com.alibaba.nacos.ai.service.resource.AiResourceManager;
 import com.alibaba.nacos.ai.service.resource.ResourceVersionInfo;
 import com.alibaba.nacos.ai.service.trace.AiResourceTraceService;
 import com.alibaba.nacos.api.ai.model.pipeline.PipelineExecutionResult;
+import com.alibaba.nacos.ai.storage.AiResourceStorageUtils;
 import com.alibaba.nacos.ai.storage.NacosConfigAiResourceStorage;
 import com.alibaba.nacos.plugin.ai.storage.AiResourceStorageRouter;
 import com.alibaba.nacos.ai.utils.PromptVersionUtils;
@@ -65,10 +66,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -148,13 +151,13 @@ public class PromptOperationServiceImpl implements PromptOperationService {
                 StringUtils.isBlank(targetVersion) ? DEFAULT_INITIAL_VERSION : targetVersion;
             validateVersion(version);
             
-            writePromptToStorage(namespaceId, promptKey, version, template, variables);
+            String storageJson = writePromptToStorage(namespaceId, promptKey, version, template,
+                variables, null);
             
             String currentUser = VisibilityHelper.resolveCurrentIdentity();
             resourceManager.insertVersionRow(namespaceId, promptKey, RESOURCE_TYPE_PROMPT,
                 StringUtils.isBlank(currentUser) ? DEFAULT_AUTHOR : currentUser,
-                VERSION_STATUS_DRAFT, version, commitMsg,
-                buildStorageJson(namespaceId, promptKey, version));
+                VERSION_STATUS_DRAFT, version, commitMsg, storageJson);
             
             resourceManager.initOrUpdateMetaForDraft(namespaceId, promptKey, RESOURCE_TYPE_PROMPT,
                 description, bizTags, version, null, true);
@@ -179,21 +182,20 @@ public class PromptOperationServiceImpl implements PromptOperationService {
                 throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
                     "Base version not found: " + basedOnVersion);
             }
-            PromptVersionInfo baseContent =
-                loadPromptFromStorage(namespaceId, promptKey, basedOnVersion);
+            PromptVersionInfo baseContent = loadPromptFromStorage(namespaceId, promptKey,
+                basedOnVersion, baseRow.getStorage());
             String newVersion = StringUtils.isBlank(targetVersion)
                 ? incrementVersion(basedOnVersion) : targetVersion;
             validateVersion(newVersion);
             checkVersionNotExists(namespaceId, promptKey, newVersion);
             
-            writePromptToStorage(namespaceId, promptKey, newVersion,
-                baseContent.getTemplate(), baseContent.getVariables());
+            String storageJson = writePromptToStorage(namespaceId, promptKey, newVersion,
+                baseContent.getTemplate(), baseContent.getVariables(), null);
             
             String currentUser = VisibilityHelper.resolveCurrentIdentity();
             resourceManager.insertVersionRow(namespaceId, promptKey, RESOURCE_TYPE_PROMPT,
                 StringUtils.isBlank(currentUser) ? DEFAULT_AUTHOR : currentUser,
-                VERSION_STATUS_DRAFT, newVersion, commitMsg,
-                buildStorageJson(namespaceId, promptKey, newVersion));
+                VERSION_STATUS_DRAFT, newVersion, commitMsg, storageJson);
             
             resourceManager.markEditingVersionCas(namespaceId, meta, resourceInfo, newVersion,
                 "create draft");
@@ -213,13 +215,13 @@ public class PromptOperationServiceImpl implements PromptOperationService {
         validateVersion(newVersion);
         checkVersionNotExists(namespaceId, promptKey, newVersion);
         
-        writePromptToStorage(namespaceId, promptKey, newVersion, template, variables);
+        String storageJson = writePromptToStorage(namespaceId, promptKey, newVersion, template,
+            variables, null);
         
         String currentUser = VisibilityHelper.resolveCurrentIdentity();
         resourceManager.insertVersionRow(namespaceId, promptKey, RESOURCE_TYPE_PROMPT,
             StringUtils.isBlank(currentUser) ? DEFAULT_AUTHOR : currentUser,
-            VERSION_STATUS_DRAFT, newVersion, commitMsg,
-            buildStorageJson(namespaceId, promptKey, newVersion));
+            VERSION_STATUS_DRAFT, newVersion, commitMsg, storageJson);
         
         resourceManager.markEditingVersionCas(namespaceId, meta, resourceInfo, newVersion,
             "create draft");
@@ -249,13 +251,14 @@ public class PromptOperationServiceImpl implements PromptOperationService {
             throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
                 "No editing draft exists for prompt: " + promptKey);
         }
-        resourceManager.requireDraftVersion(namespaceId, promptKey, RESOURCE_TYPE_PROMPT, editing);
+        AiResourceVersion draft = resourceManager.requireDraftVersion(namespaceId, promptKey,
+            RESOURCE_TYPE_PROMPT, editing);
         
-        writePromptToStorage(namespaceId, promptKey, editing, template, variables);
+        String storageJson = writePromptToStorage(namespaceId, promptKey, editing, template,
+            variables, draft.getStorage());
         
         // Update commitMsg in DB if provided
         if (StringUtils.isNotBlank(commitMsg)) {
-            String storageJson = buildStorageJson(namespaceId, promptKey, editing);
             resourceManager.updateVersionStorageAndDesc(namespaceId, promptKey,
                 RESOURCE_TYPE_PROMPT,
                 editing, storageJson, commitMsg);
@@ -268,7 +271,8 @@ public class PromptOperationServiceImpl implements PromptOperationService {
     @Override
     public void deleteDraft(String namespaceId, String promptKey) throws NacosException {
         resourceManager.doDeleteDraft(namespaceId, promptKey, RESOURCE_TYPE_PROMPT,
-            v -> deletePromptStorageForVersion(namespaceId, promptKey, v.getVersion()));
+            v -> deletePromptStorageForVersion(namespaceId, promptKey, v.getVersion(),
+                v.getStorage()));
     }
     
     @Override
@@ -302,7 +306,8 @@ public class PromptOperationServiceImpl implements PromptOperationService {
         ctx.setResourceName(promptKey);
         ctx.setVersion(finalTarget);
         
-        PromptVersionInfo content = loadPromptFromStorage(namespaceId, promptKey, finalTarget);
+        PromptVersionInfo content = loadPromptFromStorage(namespaceId, promptKey, finalTarget,
+            submitVersion.getStorage());
         List<ResourceFileContent> pipelineFiles = new ArrayList<>();
         ResourceFileContent mainFile = new ResourceFileContent();
         mainFile.setFilePath(PromptUtils.PROMPT_MAIN_DATA_ID);
@@ -452,7 +457,8 @@ public class PromptOperationServiceImpl implements PromptOperationService {
                 continue;
             }
             try {
-                deletePromptStorageForVersion(namespaceId, promptKey, v.getVersion());
+                deletePromptStorageForVersion(namespaceId, promptKey, v.getVersion(),
+                    v.getStorage());
             } catch (Exception e) {
                 LOGGER.warn("Failed to delete storage for prompt version: {}@{}", promptKey,
                     v.getVersion(), e);
@@ -565,7 +571,8 @@ public class PromptOperationServiceImpl implements PromptOperationService {
             throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
                 "Prompt version not found: " + promptKey + "@" + version);
         }
-        PromptVersionInfo result = loadPromptFromStorage(namespaceId, promptKey, version);
+        PromptVersionInfo result = loadPromptFromStorage(namespaceId, promptKey, version,
+            versionRow.getStorage());
         result.setSrcUser(versionRow.getAuthor());
         result.setCommitMsg(versionRow.getDesc());
         result.setStatus(versionRow.getStatus());
@@ -700,7 +707,8 @@ public class PromptOperationServiceImpl implements PromptOperationService {
                 "Prompt version not online: " + promptKey + "@" + resolved);
         }
         
-        PromptVersionInfo result = loadPromptFromStorage(namespaceId, promptKey, resolved);
+        PromptVersionInfo result = loadPromptFromStorage(namespaceId, promptKey, resolved,
+            versionRow.getStorage());
         result.setSrcUser(versionRow.getAuthor());
         result.setCommitMsg(versionRow.getDesc());
         return result;
@@ -763,11 +771,11 @@ public class PromptOperationServiceImpl implements PromptOperationService {
     
     // ========== Private methods ==========
     
-    private void writePromptToStorage(String namespaceId, String promptKey, String version,
-        String template,
-        List<PromptVariable> variables) throws NacosException {
-        String provider = resolvePromptStorageProvider();
-        
+    private String writePromptToStorage(String namespaceId, String promptKey, String version,
+        String template, List<PromptVariable> variables, String persistedStorage)
+        throws NacosException {
+        String provider = persistedStorage == null ? resolvePromptStorageProvider()
+            : parseStorageProvider(persistedStorage);
         PromptVersionInfo content = new PromptVersionInfo();
         content.setPromptKey(promptKey);
         content.setVersion(version);
@@ -781,23 +789,63 @@ public class PromptOperationServiceImpl implements PromptOperationService {
         content.setMd5(md5);
         
         byte[] contentBytes = JacksonUtils.toJson(content).getBytes(StandardCharsets.UTF_8);
-        StorageKey storageKey = NacosConfigAiResourceStorage.buildStorageKey(provider, namespaceId,
-            RESOURCE_TYPE_PROMPT, promptKey, version,
-            PromptUtils.PROMPT_MAIN_DATA_ID);
+        StorageKey storageKey;
+        String artifactKey = null;
+        if (AiResourceStorageUtils.OSS_PROVIDER.equals(provider)) {
+            artifactKey = resolveOssArtifactKey(namespaceId, promptKey, version, persistedStorage);
+            try {
+                contentBytes = AiResourceStorageUtils.zipSingleEntry(
+                    PromptUtils.PROMPT_MAIN_DATA_ID, contentBytes);
+            } catch (IOException e) {
+                throw new NacosException(NacosException.SERVER_ERROR,
+                    "Failed to build Prompt bundle: " + promptKey + "@" + version, e);
+            }
+            storageKey = new StorageKey(provider, artifactKey);
+        } else {
+            storageKey = NacosConfigAiResourceStorage.buildStorageKey(provider, namespaceId,
+                RESOURCE_TYPE_PROMPT, promptKey, version, PromptUtils.PROMPT_MAIN_DATA_ID);
+        }
         storageRouter.route(storageKey).save(storageKey, contentBytes);
+        return buildStorageJson(namespaceId, promptKey, version, provider, artifactKey);
     }
     
     private PromptVersionInfo loadPromptFromStorage(String namespaceId, String promptKey,
         String version)
         throws NacosException {
-        String provider = resolvePromptStorageProvider();
-        StorageKey storageKey = NacosConfigAiResourceStorage.buildStorageKey(provider, namespaceId,
-            RESOURCE_TYPE_PROMPT, promptKey, version,
-            PromptUtils.PROMPT_MAIN_DATA_ID);
+        AiResourceVersion versionRow = resourceManager.findVersion(namespaceId, promptKey,
+            RESOURCE_TYPE_PROMPT, version);
+        if (versionRow == null) {
+            throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
+                "Prompt version not found: " + promptKey + "@" + version);
+        }
+        return loadPromptFromStorage(namespaceId, promptKey, version, versionRow.getStorage());
+    }
+    
+    private PromptVersionInfo loadPromptFromStorage(String namespaceId, String promptKey,
+        String version, String storageJson) throws NacosException {
+        String provider = parseStorageProvider(storageJson);
+        StorageKey storageKey;
+        boolean ossBundle = AiResourceStorageUtils.OSS_PROVIDER.equals(provider);
+        if (ossBundle) {
+            storageKey = new StorageKey(provider,
+                requireOssArtifactKey(promptKey, version, storageJson));
+        } else {
+            storageKey = NacosConfigAiResourceStorage.buildStorageKey(provider, namespaceId,
+                RESOURCE_TYPE_PROMPT, promptKey, version, PromptUtils.PROMPT_MAIN_DATA_ID);
+        }
         byte[] data = storageRouter.route(storageKey).get(storageKey);
         if (data == null) {
             throw new NacosApiException(NacosException.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
                 "Prompt content not found: " + promptKey + "@" + version);
+        }
+        if (ossBundle) {
+            try {
+                data = AiResourceStorageUtils.readSingleEntry(data,
+                    PromptUtils.PROMPT_MAIN_DATA_ID);
+            } catch (IOException e) {
+                throw new NacosException(NacosException.SERVER_ERROR,
+                    "Invalid Prompt bundle: " + promptKey + "@" + version, e);
+            }
         }
         PromptVersionInfo result =
             JacksonUtils.toObj(new String(data, StandardCharsets.UTF_8), PromptVersionInfo.class);
@@ -807,25 +855,81 @@ public class PromptOperationServiceImpl implements PromptOperationService {
     }
     
     private void deletePromptStorageForVersion(String namespaceId, String promptKey,
-        String version) {
+        String version, String storageJson) {
         try {
-            String provider = resolvePromptStorageProvider();
-            StorageKey storageKey =
-                NacosConfigAiResourceStorage.buildStorageKey(provider, namespaceId,
+            String provider = parseStorageProvider(storageJson);
+            StorageKey storageKey;
+            if (AiResourceStorageUtils.OSS_PROVIDER.equals(provider)) {
+                String artifactKey = parseStorageString(storageJson, "artifactKey");
+                if (!isZipStorage(storageJson) || StringUtils.isBlank(artifactKey)) {
+                    return;
+                }
+                storageKey = new StorageKey(provider, artifactKey);
+            } else {
+                storageKey = NacosConfigAiResourceStorage.buildStorageKey(provider, namespaceId,
                     RESOURCE_TYPE_PROMPT, promptKey, version,
                     PromptUtils.PROMPT_MAIN_DATA_ID);
+            }
             storageRouter.route(storageKey).delete(storageKey);
         } catch (Exception e) {
             LOGGER.warn("Failed to delete prompt storage: {}@{}", promptKey, version, e);
         }
     }
     
-    private static String buildStorageJson(String namespaceId, String promptKey, String version) {
-        Map<String, Object> json = new HashMap<>(4);
-        json.put("provider", resolvePromptStorageProvider());
+    private static String buildStorageJson(String namespaceId, String promptKey, String version,
+        String provider, String artifactKey) {
+        Map<String, Object> json = new LinkedHashMap<>(6);
+        json.put("provider", provider);
+        if (AiResourceStorageUtils.OSS_PROVIDER.equals(provider)) {
+            json.put("format", AiResourceStorageUtils.ZIP_FORMAT);
+            json.put("artifactKey", artifactKey);
+        }
         json.put("scope", namespaceId + ":" + promptKey + ":" + version);
         json.put("files", Collections.singletonList(PromptUtils.PROMPT_MAIN_DATA_ID));
         return JacksonUtils.toJson(json);
+    }
+    
+    private static String resolveOssArtifactKey(String namespaceId, String promptKey,
+        String version, String persistedStorage) throws NacosException {
+        if (persistedStorage == null) {
+            return AiResourceStorageUtils.buildBundleKey(namespaceId, RESOURCE_TYPE_PROMPT,
+                promptKey, version);
+        }
+        return requireOssArtifactKey(promptKey, version, persistedStorage);
+    }
+    
+    private static String requireOssArtifactKey(String promptKey, String version,
+        String storageJson) throws NacosException {
+        String artifactKey = parseStorageString(storageJson, "artifactKey");
+        if (!isZipStorage(storageJson) || StringUtils.isBlank(artifactKey)) {
+            throw new NacosException(NacosException.SERVER_ERROR,
+                "OSS Prompt storage descriptor must use ZIP format: " + promptKey + "@"
+                    + version);
+        }
+        return artifactKey;
+    }
+    
+    private static String parseStorageProvider(String storageJson) {
+        String provider = parseStorageString(storageJson, "provider");
+        return StringUtils.isBlank(provider) ? NacosConfigAiResourceStorage.TYPE : provider.trim();
+    }
+    
+    private static boolean isZipStorage(String storageJson) {
+        return AiResourceStorageUtils.ZIP_FORMAT.equals(
+            parseStorageString(storageJson, "format"));
+    }
+    
+    private static String parseStorageString(String storageJson, String key) {
+        if (StringUtils.isBlank(storageJson)) {
+            return null;
+        }
+        try {
+            Map<String, Object> storage = JacksonUtils.toObj(storageJson, Map.class);
+            Object value = storage.get(key);
+            return value instanceof String ? (String) value : null;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
     
     private static String resolvePromptStorageProvider() {

@@ -55,6 +55,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.StandardEnvironment;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,6 +65,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -70,6 +76,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -94,6 +101,9 @@ class PromptOperationServiceImplTest {
     
     @Mock
     private AiResourceStorage storage;
+    
+    @Mock
+    private AiResourceStorage ossStorage;
     
     @Mock
     private AiResourcePersistService aiResourcePersistService;
@@ -124,7 +134,9 @@ class PromptOperationServiceImplTest {
         EnvUtil.setEnvironment(new StandardEnvironment());
         AiResourceStorageRouter.reset();
         lenient().when(storage.type()).thenReturn("nacos_config");
+        lenient().when(ossStorage.type()).thenReturn("oss");
         AiResourceStorageRouter.join(storage);
+        AiResourceStorageRouter.join(ossStorage);
         PublishPipelineManager pipelineManager = TestAiPipelineSupport.newManager(false,
             Collections.emptyList(), Collections.emptyList());
         PublishPipelineExecutor publishPipelineExecutor =
@@ -150,6 +162,8 @@ class PromptOperationServiceImplTest {
             visibilityManagerStatic.close();
         }
         TestAiPipelineSupport.clearStateChecker();
+        System.clearProperty(
+            com.alibaba.nacos.ai.constant.Constants.Prompt.PROMPT_STORAGE_PROVIDER_CONFIG_KEY);
         EnvUtil.setEnvironment(CACHED_ENVIRONMENT);
     }
     
@@ -166,6 +180,36 @@ class PromptOperationServiceImplTest {
         verify(aiResourcePersistService).insert(any(AiResource.class));
         verify(aiResourceVersionPersistService).insert(any(AiResourceVersion.class));
         verify(storage).save(any(StorageKey.class), any(byte[].class));
+    }
+    
+    @Test
+    void testCreateDraftStoresOssBundle() throws Exception {
+        System.setProperty(
+            com.alibaba.nacos.ai.constant.Constants.Prompt.PROMPT_STORAGE_PROVIDER_CONFIG_KEY,
+            "oss");
+        when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(null);
+        
+        service.createDraft(NS, PROMPT_KEY, null, null, "Hello {{name}}", null, null, "desc",
+            null);
+        
+        ArgumentCaptor<StorageKey> keyCaptor = ArgumentCaptor.forClass(StorageKey.class);
+        ArgumentCaptor<byte[]> bundleCaptor = ArgumentCaptor.forClass(byte[].class);
+        verify(ossStorage).save(keyCaptor.capture(), bundleCaptor.capture());
+        assertEquals("public/prompt/test-prompt/0.0.1/bundle.zip",
+            keyCaptor.getValue().getKey());
+        PromptVersionInfo stored = JacksonUtils.toObj(
+            new String(readZipEntry(bundleCaptor.getValue(), "content.json"),
+                StandardCharsets.UTF_8),
+            PromptVersionInfo.class);
+        assertEquals("Hello {{name}}", stored.getTemplate());
+        ArgumentCaptor<AiResourceVersion> versionCaptor =
+            ArgumentCaptor.forClass(AiResourceVersion.class);
+        verify(aiResourceVersionPersistService).insert(versionCaptor.capture());
+        assertTrue(versionCaptor.getValue().getStorage().contains("\"provider\":\"oss\""));
+        assertTrue(versionCaptor.getValue().getStorage().contains("\"format\":\"zip\""));
+        assertTrue(versionCaptor.getValue().getStorage().contains(
+            "\"artifactKey\":\"public/prompt/test-prompt/0.0.1/bundle.zip\""));
+        verify(storage, never()).save(any(StorageKey.class), any(byte[].class));
     }
     
     @Test
@@ -279,6 +323,26 @@ class PromptOperationServiceImplTest {
     }
     
     @Test
+    void testUpdateDraftKeepsPersistedOssBundle() throws NacosException {
+        AiResource meta =
+            createMeta(PROMPT_KEY, 1L, "{\"labels\":{},\"editingVersion\":\"0.0.1\"}");
+        when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(meta);
+        AiResourceVersion draft = createVersionRow("0.0.1", "draft");
+        draft.setStorage("{\"provider\":\"oss\",\"format\":\"zip\","
+            + "\"artifactKey\":\"public/prompt/test-prompt/0.0.1/bundle.zip\","
+            + "\"files\":[\"content.json\"]}");
+        when(aiResourceVersionPersistService.find(NS, PROMPT_KEY, PROMPT_TYPE, "0.0.1"))
+            .thenReturn(draft);
+        
+        service.updateDraft(NS, PROMPT_KEY, "updated template", null, "update msg");
+        
+        verify(ossStorage).save(argThat(key -> "oss".equals(key.getProvider())
+            && "public/prompt/test-prompt/0.0.1/bundle.zip".equals(key.getKey())),
+            any(byte[].class));
+        verify(storage, never()).save(any(StorageKey.class), any(byte[].class));
+    }
+    
+    @Test
     void testUpdateDraftShouldThrowWhenNoEditingVersion() {
         AiResource meta = createMeta(PROMPT_KEY, 1L, "{\"labels\":{}}");
         when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(meta);
@@ -315,6 +379,27 @@ class PromptOperationServiceImplTest {
         
         verify(aiResourceVersionPersistService).delete(NS, PROMPT_KEY, PROMPT_TYPE, "0.0.1");
         verify(storage).delete(any(StorageKey.class));
+    }
+    
+    @Test
+    void testDeleteDraftDeletesPersistedOssBundle() throws NacosException {
+        AiResource meta =
+            createMeta(PROMPT_KEY, 1L, "{\"labels\":{},\"editingVersion\":\"0.0.1\"}");
+        when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(meta);
+        AiResourceVersion draft = createVersionRow("0.0.1", "draft");
+        draft.setStorage("{\"provider\":\"oss\",\"format\":\"zip\","
+            + "\"artifactKey\":\"public/prompt/test-prompt/0.0.1/bundle.zip\","
+            + "\"files\":[\"content.json\"]}");
+        when(aiResourceVersionPersistService.find(NS, PROMPT_KEY, PROMPT_TYPE, "0.0.1"))
+            .thenReturn(draft);
+        when(aiResourcePersistService.updateMetaCas(eq(NS), eq(PROMPT_KEY), eq(PROMPT_TYPE),
+            eq(1L), any(AiResource.class))).thenReturn(true);
+        
+        service.deleteDraft(NS, PROMPT_KEY);
+        
+        verify(ossStorage).delete(argThat(key -> "oss".equals(key.getProvider())
+            && "public/prompt/test-prompt/0.0.1/bundle.zip".equals(key.getKey())));
+        verify(storage, never()).delete(any(StorageKey.class));
     }
     
     @Test
@@ -988,6 +1073,47 @@ class PromptOperationServiceImplTest {
         assertEquals("0.0.1", result.getVersion());
     }
     
+    @Test
+    void testGetPromptVersionDetailReadsPersistedOssBundle() throws Exception {
+        AiResource meta = createMeta(PROMPT_KEY, 1L, "{\"labels\":{}}");
+        when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(meta);
+        AiResourceVersion versionRow = createVersionRow("0.0.1", "online");
+        versionRow.setStorage("{\"provider\":\"oss\",\"format\":\"zip\","
+            + "\"artifactKey\":\"public/prompt/test-prompt/0.0.1/bundle.zip\","
+            + "\"files\":[\"content.json\"]}");
+        when(aiResourceVersionPersistService.find(NS, PROMPT_KEY, PROMPT_TYPE, "0.0.1"))
+            .thenReturn(versionRow);
+        PromptVersionInfo content = new PromptVersionInfo();
+        content.setTemplate("hello");
+        when(ossStorage.get(any(StorageKey.class))).thenReturn(zipSingleEntry("content.json",
+            JacksonUtils.toJson(content).getBytes(StandardCharsets.UTF_8)));
+        
+        PromptVersionInfo result = service.getPromptVersionDetail(NS, PROMPT_KEY, "0.0.1");
+        
+        assertEquals("hello", result.getTemplate());
+        verify(ossStorage).get(argThat(key -> "oss".equals(key.getProvider())
+            && "public/prompt/test-prompt/0.0.1/bundle.zip".equals(key.getKey())));
+        verify(storage, never()).get(any(StorageKey.class));
+    }
+    
+    @Test
+    void testGetPromptVersionDetailRejectsNonBundleOssStorage() throws NacosException {
+        AiResource meta = createMeta(PROMPT_KEY, 1L, "{\"labels\":{}}");
+        when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(meta);
+        AiResourceVersion versionRow = createVersionRow("0.0.1", "online");
+        versionRow.setStorage(
+            "{\"provider\":\"oss\",\"files\":[\"content.json\"]}");
+        when(aiResourceVersionPersistService.find(NS, PROMPT_KEY, PROMPT_TYPE, "0.0.1"))
+            .thenReturn(versionRow);
+        
+        NacosException exception = assertThrows(NacosException.class,
+            () -> service.getPromptVersionDetail(NS, PROMPT_KEY, "0.0.1"));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        verify(ossStorage, never()).get(any(StorageKey.class));
+        verify(storage, never()).get(any(StorageKey.class));
+    }
+    
     // ========== listPrompts / listPromptVersions ==========
     
     @Test
@@ -1102,6 +1228,8 @@ class PromptOperationServiceImplTest {
     void testRefreshLatestMirrorPublishesToLegacyConfig() throws NacosException {
         AiResource meta = createMeta(PROMPT_KEY, 1L, "{\"labels\":{\"latest\":\"0.0.1\"}}");
         when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(meta);
+        when(aiResourceVersionPersistService.find(NS, PROMPT_KEY, PROMPT_TYPE, "0.0.1"))
+            .thenReturn(createVersionRow("0.0.1", "online"));
         
         PromptVersionInfo content = new PromptVersionInfo();
         content.setTemplate("hello");
@@ -1181,5 +1309,34 @@ class PromptOperationServiceImplTest {
     
     private void mockStorageGet(byte[] content) throws NacosException {
         lenient().when(storage.get(any(StorageKey.class))).thenReturn(content);
+    }
+    
+    private static byte[] readZipEntry(byte[] zipBytes, String expectedName) throws IOException {
+        try (ZipInputStream input =
+            new ZipInputStream(new ByteArrayInputStream(zipBytes), StandardCharsets.UTF_8)) {
+            ZipEntry entry;
+            while ((entry = input.getNextEntry()) != null) {
+                if (!entry.isDirectory() && expectedName.equals(entry.getName())) {
+                    ByteArrayOutputStream output = new ByteArrayOutputStream();
+                    byte[] buffer = new byte[1024];
+                    int read;
+                    while ((read = input.read(buffer)) != -1) {
+                        output.write(buffer, 0, read);
+                    }
+                    return output.toByteArray();
+                }
+            }
+        }
+        throw new IOException("ZIP entry not found: " + expectedName);
+    }
+    
+    private static byte[] zipSingleEntry(String name, byte[] content) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+            zip.putNextEntry(new ZipEntry(name));
+            zip.write(content);
+            zip.closeEntry();
+        }
+        return output.toByteArray();
     }
 }
