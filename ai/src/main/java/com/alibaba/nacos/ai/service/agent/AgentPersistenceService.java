@@ -1348,6 +1348,8 @@ public class AgentPersistenceService {
         AgentVersionStorageDescriptor expected) {
         return Objects.equals(actual.getProvider(), expected.getProvider())
             && Objects.equals(actual.getKey(), expected.getKey())
+            && Objects.equals(actual.getFormat(), expected.getFormat())
+            && Objects.equals(actual.getArtifactKey(), expected.getArtifactKey())
             && Objects.equals(actual.getKeyFormat(), expected.getKeyFormat())
             && Objects.equals(actual.getAgentNameCodec(), expected.getAgentNameCodec())
             && Objects.equals(actual.getContentDigest(), expected.getContentDigest())

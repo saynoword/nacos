@@ -17,6 +17,7 @@
 package com.alibaba.nacos.ai.service.agent.storage;
 
 import com.alibaba.nacos.ai.model.agent.AgentVersionStorageDescriptor;
+import com.alibaba.nacos.ai.storage.AiResourceStorageUtils;
 import com.alibaba.nacos.plugin.ai.storage.model.StorageKey;
 
 import java.util.Arrays;
@@ -74,7 +75,9 @@ public final class PreparedAgentVersionWrite {
     }
     
     StorageKey getStorageKey() {
-        return new StorageKey(descriptor.getProvider(), descriptor.getKey());
+        String key = AiResourceStorageUtils.OSS_PROVIDER.equals(descriptor.getProvider())
+            ? descriptor.getArtifactKey() : descriptor.getKey();
+        return new StorageKey(descriptor.getProvider(), key);
     }
     
     private static AgentVersionStorageDescriptor copyDescriptor(
@@ -82,6 +85,8 @@ public final class PreparedAgentVersionWrite {
         AgentVersionStorageDescriptor result = new AgentVersionStorageDescriptor();
         result.setProvider(source.getProvider());
         result.setKey(source.getKey());
+        result.setFormat(source.getFormat());
+        result.setArtifactKey(source.getArtifactKey());
         result.setKeyFormat(source.getKeyFormat());
         result.setAgentNameCodec(source.getAgentNameCodec());
         result.setContentDigest(source.getContentDigest());

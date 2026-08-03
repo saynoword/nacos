@@ -29,6 +29,8 @@ class AgentVersionStorageDescriptorTest {
         AgentVersionStorageDescriptor descriptor = new AgentVersionStorageDescriptor();
         assertNull(descriptor.getProvider());
         assertNull(descriptor.getKey());
+        assertNull(descriptor.getFormat());
+        assertNull(descriptor.getArtifactKey());
         assertNull(descriptor.getKeyFormat());
         assertNull(descriptor.getAgentNameCodec());
         assertNull(descriptor.getContentDigest());
@@ -38,6 +40,8 @@ class AgentVersionStorageDescriptorTest {
         
         descriptor.setProvider("nacos_config");
         descriptor.setKey("logical-key");
+        descriptor.setFormat("zip");
+        descriptor.setArtifactKey("artifact-key");
         descriptor.setKeyFormat("agent-version-config-v1");
         descriptor.setAgentNameCodec("rad-ascii-v1");
         descriptor.setContentDigest(digest('a'));
@@ -47,6 +51,8 @@ class AgentVersionStorageDescriptorTest {
         
         assertEquals("nacos_config", descriptor.getProvider());
         assertEquals("logical-key", descriptor.getKey());
+        assertEquals("zip", descriptor.getFormat());
+        assertEquals("artifact-key", descriptor.getArtifactKey());
         assertEquals("agent-version-config-v1", descriptor.getKeyFormat());
         assertEquals("rad-ascii-v1", descriptor.getAgentNameCodec());
         assertEquals(digest('a'), descriptor.getContentDigest());
@@ -66,6 +72,8 @@ class AgentVersionStorageDescriptorTest {
         
         assertEquals(original.getProvider(), restored.getProvider());
         assertEquals(original.getKey(), restored.getKey());
+        assertEquals(original.getFormat(), restored.getFormat());
+        assertEquals(original.getArtifactKey(), restored.getArtifactKey());
         assertEquals(original.getKeyFormat(), restored.getKeyFormat());
         assertEquals(original.getAgentNameCodec(), restored.getAgentNameCodec());
         assertEquals(original.getContentDigest(), restored.getContentDigest());
@@ -78,6 +86,8 @@ class AgentVersionStorageDescriptorTest {
         AgentVersionStorageDescriptor result = new AgentVersionStorageDescriptor();
         result.setProvider("nacos_config");
         result.setKey("logical-key");
+        result.setFormat("zip");
+        result.setArtifactKey("artifact-key");
         result.setKeyFormat("agent-version-config-v1");
         result.setAgentNameCodec("rad-ascii-v1");
         result.setContentDigest(digest('a'));

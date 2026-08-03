@@ -17,6 +17,7 @@
 package com.alibaba.nacos.ai.service.agent.storage;
 
 import com.alibaba.nacos.ai.model.agent.AgentVersionStorageDescriptor;
+import com.alibaba.nacos.ai.storage.AiResourceStorageUtils;
 import com.alibaba.nacos.api.exception.runtime.NacosDeserializationException;
 import com.alibaba.nacos.api.exception.runtime.NacosSerializationException;
 import com.alibaba.nacos.common.utils.JacksonUtils;
@@ -39,6 +40,10 @@ import java.util.regex.Pattern;
 public final class AgentVersionStorageDescriptorSerializer {
     
     public static final String NACOS_CONFIG_PROVIDER = "nacos_config";
+    
+    public static final String OSS_PROVIDER = AiResourceStorageUtils.OSS_PROVIDER;
+    
+    public static final String ZIP_FORMAT = AiResourceStorageUtils.ZIP_FORMAT;
     
     public static final String NACOS_CONFIG_KEY_FORMAT =
         AgentVersionStorageDescriptor.NACOS_CONFIG_KEY_FORMAT;
@@ -68,8 +73,9 @@ public final class AgentVersionStorageDescriptorSerializer {
         .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
     
     private static final Set<String> FIELDS = Collections.unmodifiableSet(
-        new HashSet<String>(Arrays.asList("provider", "key", "keyFormat", "agentNameCodec",
-            "contentDigest", "mediaType", "schemaVersion", "size")));
+        new HashSet<String>(Arrays.asList("provider", "key", "format", "artifactKey",
+            "keyFormat", "agentNameCodec", "contentDigest", "mediaType", "schemaVersion",
+            "size")));
     
     private AgentVersionStorageDescriptorSerializer() {
     }
@@ -134,7 +140,9 @@ public final class AgentVersionStorageDescriptorSerializer {
             }
         }
         validateJsonText(root, "provider", false);
-        validateJsonText(root, "key", false);
+        validateJsonText(root, "key", true);
+        validateJsonText(root, "format", true);
+        validateJsonText(root, "artifactKey", true);
         validateJsonText(root, "keyFormat", true);
         validateJsonText(root, "agentNameCodec", true);
         validateJsonText(root, "contentDigest", false);
@@ -158,7 +166,9 @@ public final class AgentVersionStorageDescriptorSerializer {
             || !PROVIDER_PATTERN.matcher(provider).matches()) {
             throw new IllegalArgumentException("Invalid Agent Version storage provider");
         }
-        validateRequiredText("key", descriptor.getKey(), MAX_KEY_LENGTH);
+        validateOptionalText("key", descriptor.getKey(), MAX_KEY_LENGTH);
+        validateOptionalText("format", descriptor.getFormat(), MAX_FORMAT_LENGTH);
+        validateOptionalText("artifactKey", descriptor.getArtifactKey(), MAX_KEY_LENGTH);
         validateOptionalText("keyFormat", descriptor.getKeyFormat(), MAX_FORMAT_LENGTH);
         validateOptionalText("agentNameCodec", descriptor.getAgentNameCodec(), MAX_FORMAT_LENGTH);
         if (descriptor.getContentDigest() == null
@@ -177,6 +187,26 @@ public final class AgentVersionStorageDescriptorSerializer {
         if (size == null || size < 0 || size > MAX_CONTENT_SIZE) {
             throw new IllegalArgumentException(
                 "Agent Version storage size must be between 0 and " + MAX_CONTENT_SIZE);
+        }
+        if (OSS_PROVIDER.equals(provider)) {
+            if (descriptor.getKey() != null) {
+                throw new IllegalArgumentException("OSS Agent Version storage must not use key");
+            }
+            if (!ZIP_FORMAT.equals(descriptor.getFormat())) {
+                throw new IllegalArgumentException("OSS Agent Version format must be "
+                    + ZIP_FORMAT);
+            }
+            validateRequiredText("artifactKey", descriptor.getArtifactKey(), MAX_KEY_LENGTH);
+            if (descriptor.getKeyFormat() != null || descriptor.getAgentNameCodec() != null) {
+                throw new IllegalArgumentException(
+                    "OSS Agent Version storage must not use Config pointer metadata");
+            }
+        } else {
+            validateRequiredText("key", descriptor.getKey(), MAX_KEY_LENGTH);
+            if (descriptor.getFormat() != null || descriptor.getArtifactKey() != null) {
+                throw new IllegalArgumentException(
+                    "Non-OSS Agent Version storage must use key");
+            }
         }
         if (NACOS_CONFIG_PROVIDER.equals(provider)) {
             if (!NACOS_CONFIG_KEY_FORMAT.equals(descriptor.getKeyFormat())) {

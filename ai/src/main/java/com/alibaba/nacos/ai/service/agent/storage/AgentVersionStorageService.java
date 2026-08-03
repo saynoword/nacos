@@ -19,6 +19,7 @@ package com.alibaba.nacos.ai.service.agent.storage;
 import com.alibaba.nacos.ai.constant.Constants;
 import com.alibaba.nacos.ai.model.agent.AgentVersionContent;
 import com.alibaba.nacos.ai.model.agent.AgentVersionStorageDescriptor;
+import com.alibaba.nacos.ai.storage.AiResourceStorageUtils;
 import com.alibaba.nacos.ai.storage.NacosConfigAiResourceStorage;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.common.utils.StringUtils;
@@ -28,6 +29,7 @@ import com.alibaba.nacos.plugin.ai.storage.spi.AiResourceStorage;
 import com.alibaba.nacos.sys.env.EnvUtil;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -44,6 +46,10 @@ import java.util.function.Supplier;
 public class AgentVersionStorageService {
     
     private static final String DEFAULT_STORAGE_PROVIDER = NacosConfigAiResourceStorage.TYPE;
+    
+    private static final String RESOURCE_TYPE_AGENT = "agent";
+    
+    private static final String CONTENT_ENTRY_NAME = "content.json";
     
     private final AiResourceStorageRouter storageRouter;
     
@@ -78,6 +84,11 @@ public class AgentVersionStorageService {
             agentName, version);
         AgentVersionContentSerializer.SerializedContent serializedContent =
             AgentVersionContentSerializer.serialize(content);
+        if (AiResourceStorageUtils.OSS_PROVIDER.equals(provider)) {
+            storageKey = new StorageKey(provider, AiResourceStorageUtils.buildBundleKey(namespaceId,
+                RESOURCE_TYPE_AGENT, agentName, version));
+            serializedContent = buildOssBundle(serializedContent);
+        }
         AgentVersionStorageDescriptor descriptor =
             buildDescriptor(storageKey, serializedContent);
         return new PreparedAgentVersionWrite(descriptor, serializedContent);
@@ -99,6 +110,9 @@ public class AgentVersionStorageService {
         AgentVersionStorageDescriptorSerializer.validate(currentDescriptor);
         AgentVersionContentSerializer.SerializedContent serializedContent =
             AgentVersionContentSerializer.serialize(content);
+        if (AiResourceStorageUtils.OSS_PROVIDER.equals(currentDescriptor.getProvider())) {
+            serializedContent = buildOssBundle(serializedContent);
+        }
         AgentVersionStorageDescriptor descriptor =
             buildReplacementDescriptor(currentDescriptor, serializedContent);
         return new PreparedAgentVersionWrite(descriptor, serializedContent);
@@ -175,8 +189,16 @@ public class AgentVersionStorageService {
             throw corruptedContent("Agent Version content digest does not match its descriptor",
                 null);
         }
+        byte[] contentBytes = bytes;
+        if (AiResourceStorageUtils.OSS_PROVIDER.equals(descriptor.getProvider())) {
+            try {
+                contentBytes = AiResourceStorageUtils.readSingleEntry(bytes, CONTENT_ENTRY_NAME);
+            } catch (IOException e) {
+                throw corruptedContent("Agent Version ZIP bundle cannot be decoded", e);
+            }
+        }
         try {
-            return AgentVersionContentSerializer.deserialize(bytes);
+            return AgentVersionContentSerializer.deserialize(contentBytes);
         } catch (IllegalArgumentException e) {
             throw corruptedContent("Agent Version content cannot be decoded", e);
         }
@@ -201,7 +223,12 @@ public class AgentVersionStorageService {
         AgentVersionContentSerializer.SerializedContent serializedContent) {
         AgentVersionStorageDescriptor result = new AgentVersionStorageDescriptor();
         result.setProvider(storageKey.getProvider());
-        result.setKey(storageKey.getKey());
+        if (AiResourceStorageUtils.OSS_PROVIDER.equals(storageKey.getProvider())) {
+            result.setFormat(AiResourceStorageUtils.ZIP_FORMAT);
+            result.setArtifactKey(storageKey.getKey());
+        } else {
+            result.setKey(storageKey.getKey());
+        }
         if (NacosConfigAiResourceStorage.TYPE.equals(storageKey.getProvider())) {
             result.setKeyFormat(AgentVersionStorageDescriptor.NACOS_CONFIG_KEY_FORMAT);
             result.setAgentNameCodec(AgentVersionStorageDescriptor.RAD_AGENT_NAME_CODEC);
@@ -219,6 +246,8 @@ public class AgentVersionStorageService {
         AgentVersionStorageDescriptor result = new AgentVersionStorageDescriptor();
         result.setProvider(currentDescriptor.getProvider());
         result.setKey(currentDescriptor.getKey());
+        result.setFormat(currentDescriptor.getFormat());
+        result.setArtifactKey(currentDescriptor.getArtifactKey());
         result.setKeyFormat(currentDescriptor.getKeyFormat());
         result.setAgentNameCodec(currentDescriptor.getAgentNameCodec());
         result.setContentDigest(serializedContent.getContentDigest());
@@ -235,7 +264,20 @@ public class AgentVersionStorageService {
         } catch (IllegalArgumentException e) {
             throw corruptedContent("Invalid Agent Version storage descriptor", e);
         }
-        return new StorageKey(descriptor.getProvider(), descriptor.getKey());
+        String key = AiResourceStorageUtils.OSS_PROVIDER.equals(descriptor.getProvider())
+            ? descriptor.getArtifactKey() : descriptor.getKey();
+        return new StorageKey(descriptor.getProvider(), key);
+    }
+    
+    private static AgentVersionContentSerializer.SerializedContent buildOssBundle(
+        AgentVersionContentSerializer.SerializedContent content) {
+        try {
+            byte[] bundle = AiResourceStorageUtils.zipSingleEntry(CONTENT_ENTRY_NAME,
+                content.getBytes());
+            return AgentVersionContentSerializer.fromPersistedBytes(bundle);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Unable to build Agent Version ZIP bundle", e);
+        }
     }
     
     private String resolveStorageProvider() {

@@ -18,6 +18,7 @@ package com.alibaba.nacos.ai.service.agent.storage;
 
 import com.alibaba.nacos.ai.model.agent.AgentVersionContent;
 import com.alibaba.nacos.ai.model.agent.AgentVersionStorageDescriptor;
+import com.alibaba.nacos.ai.storage.AiResourceStorageUtils;
 import com.alibaba.nacos.ai.storage.NacosConfigAiResourceStorage;
 import com.alibaba.nacos.api.ai.model.agent.AgentCallInterface;
 import com.alibaba.nacos.api.ai.model.agent.EndpointSource;
@@ -94,6 +95,33 @@ class AgentVersionStorageServiceTest {
     }
     
     @Test
+    void testPrepareOssBuildsBundleDescriptorAndBytes() throws Exception {
+        service = new AgentVersionStorageService(storageRouter, () -> "oss");
+        AgentVersionContent content = newContent();
+        AgentVersionContentSerializer.SerializedContent expected =
+            AgentVersionContentSerializer.serialize(content);
+        
+        PreparedAgentVersionWrite prepared = service.prepare(NAMESPACE_ID, AGENT_NAME, VERSION,
+            content);
+        
+        AgentVersionStorageDescriptor descriptor = prepared.getDescriptor();
+        String artifactKey = "public/agent/Nacos%20Agent/1.0.0-RC1/bundle.zip";
+        assertEquals("oss", descriptor.getProvider());
+        assertNull(descriptor.getKey());
+        assertEquals("zip", descriptor.getFormat());
+        assertEquals(artifactKey, descriptor.getArtifactKey());
+        assertNull(descriptor.getKeyFormat());
+        assertNull(descriptor.getAgentNameCodec());
+        assertArrayEquals(expected.getBytes(), AiResourceStorageUtils.readSingleEntry(
+            prepared.getBytes(), "content.json"));
+        assertEquals(AgentVersionContentSerializer.digest(prepared.getBytes()),
+            descriptor.getContentDigest());
+        assertEquals((long) prepared.getBytes().length, descriptor.getSize());
+        assertEquals(artifactKey, prepared.getStorageKey().getKey());
+        verifyNoInteractions(storageRouter, storage);
+    }
+    
+    @Test
     void testPrepareReplacementPreservesPersistedPointer() {
         AgentVersionStorageDescriptor current = service.prepare(NAMESPACE_ID, AGENT_NAME, VERSION,
             newContent()).getDescriptor();
@@ -133,6 +161,28 @@ class AgentVersionStorageServiceTest {
         assertEquals(current.getKey(), descriptor.getKey());
         assertEquals(current.getKeyFormat(), descriptor.getKeyFormat());
         assertEquals(current.getAgentNameCodec(), descriptor.getAgentNameCodec());
+        verifyNoInteractions(storageRouter, storage);
+    }
+    
+    @Test
+    void testPrepareReplacementPreservesPersistedOssBundle() throws Exception {
+        service = new AgentVersionStorageService(storageRouter, () -> "oss");
+        AgentVersionStorageDescriptor current = service.prepare(NAMESPACE_ID, AGENT_NAME, VERSION,
+            newContent()).getDescriptor();
+        AgentVersionContent replacement = newContent();
+        replacement.getCallInterfaces().get(0).setProtocolVersion("0.4");
+        
+        PreparedAgentVersionWrite prepared = service.prepare(current, replacement);
+        
+        AgentVersionStorageDescriptor descriptor = prepared.getDescriptor();
+        assertEquals(current.getProvider(), descriptor.getProvider());
+        assertEquals(current.getFormat(), descriptor.getFormat());
+        assertEquals(current.getArtifactKey(), descriptor.getArtifactKey());
+        assertNull(descriptor.getKey());
+        byte[] contentBytes = AiResourceStorageUtils.readSingleEntry(prepared.getBytes(),
+            "content.json");
+        AgentVersionContent loaded = AgentVersionContentSerializer.deserialize(contentBytes);
+        assertEquals("0.4", loaded.getCallInterfaces().get(0).getProtocolVersion());
         verifyNoInteractions(storageRouter, storage);
     }
     
@@ -181,6 +231,41 @@ class AgentVersionStorageServiceTest {
         
         verify(storage).save(any(StorageKey.class), any(byte[].class));
         assertEquals("a2a", loaded.getCallInterfaces().get(0).getProtocol());
+    }
+    
+    @Test
+    void testPrepareSaveAndLoadOssBundleRoundTrip() throws NacosException {
+        service = new AgentVersionStorageService(storageRouter, () -> "oss");
+        PreparedAgentVersionWrite prepared = service.prepare(NAMESPACE_ID, AGENT_NAME, VERSION,
+            newContent());
+        when(storageRouter.route(any(StorageKey.class))).thenReturn(storage);
+        when(storage.get(any(StorageKey.class))).thenReturn(prepared.getBytes());
+        
+        service.save(prepared);
+        AgentVersionContent loaded = service.load(prepared.getDescriptor());
+        
+        ArgumentCaptor<StorageKey> keyCaptor = ArgumentCaptor.forClass(StorageKey.class);
+        verify(storage).save(keyCaptor.capture(), any(byte[].class));
+        assertEquals(prepared.getDescriptor().getArtifactKey(), keyCaptor.getValue().getKey());
+        assertEquals("a2a", loaded.getCallInterfaces().get(0).getProtocol());
+    }
+    
+    @Test
+    void testLoadRejectsRawJsonForOssDescriptor() throws NacosException {
+        service = new AgentVersionStorageService(storageRouter, () -> "oss");
+        byte[] rawJson = AgentVersionContentSerializer.serialize(newContent()).getBytes();
+        AgentVersionStorageDescriptor descriptor = service.prepare(NAMESPACE_ID, AGENT_NAME,
+            VERSION, newContent()).getDescriptor();
+        descriptor.setContentDigest(AgentVersionContentSerializer.digest(rawJson));
+        descriptor.setSize((long) rawJson.length);
+        when(storageRouter.route(any(StorageKey.class))).thenReturn(storage);
+        when(storage.get(any(StorageKey.class))).thenReturn(rawJson);
+        
+        NacosException exception = assertThrows(NacosException.class,
+            () -> service.load(descriptor));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        assertEquals("Agent Version ZIP bundle cannot be decoded", exception.getErrMsg());
     }
     
     @Test
@@ -393,6 +478,21 @@ class AgentVersionStorageServiceTest {
         verify(storage).delete(keyCaptor.capture());
         assertEquals(descriptor.getProvider(), keyCaptor.getValue().getProvider());
         assertEquals(descriptor.getKey(), keyCaptor.getValue().getKey());
+    }
+    
+    @Test
+    void testDeleteUsesPersistedOssArtifactKey() throws NacosException {
+        service = new AgentVersionStorageService(storageRouter, () -> "oss");
+        AgentVersionStorageDescriptor descriptor = service.prepare(NAMESPACE_ID, AGENT_NAME,
+            VERSION, newContent()).getDescriptor();
+        when(storageRouter.route(any(StorageKey.class))).thenReturn(storage);
+        ArgumentCaptor<StorageKey> keyCaptor = ArgumentCaptor.forClass(StorageKey.class);
+        
+        service.delete(descriptor);
+        
+        verify(storage).delete(keyCaptor.capture());
+        assertEquals("oss", keyCaptor.getValue().getProvider());
+        assertEquals(descriptor.getArtifactKey(), keyCaptor.getValue().getKey());
     }
     
     @Test

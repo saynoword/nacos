@@ -92,6 +92,10 @@ public final class AgentVersionContentSerializer {
             throw new IllegalArgumentException(
                 "AgentVersionContent exceeds " + MAX_CONTENT_SIZE + " bytes");
         }
+        return fromPersistedBytes(bytes);
+    }
+    
+    static SerializedContent fromPersistedBytes(byte[] bytes) {
         return new SerializedContent(bytes, digest(bytes));
     }
     

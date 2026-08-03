@@ -35,6 +35,10 @@ public class AgentVersionStorageDescriptor {
     
     private String key;
     
+    private String format;
+    
+    private String artifactKey;
+    
     private String keyFormat;
     
     private String agentNameCodec;
@@ -61,6 +65,22 @@ public class AgentVersionStorageDescriptor {
     
     public void setKey(String key) {
         this.key = key;
+    }
+    
+    public String getFormat() {
+        return format;
+    }
+    
+    public void setFormat(String format) {
+        this.format = format;
+    }
+    
+    public String getArtifactKey() {
+        return artifactKey;
+    }
+    
+    public void setArtifactKey(String artifactKey) {
+        this.artifactKey = artifactKey;
     }
     
     public String getKeyFormat() {

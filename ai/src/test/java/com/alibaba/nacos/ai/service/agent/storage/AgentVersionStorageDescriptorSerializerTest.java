@@ -40,6 +40,21 @@ class AgentVersionStorageDescriptorSerializerTest {
     }
     
     @Test
+    void testOssRoundTrip() {
+        AgentVersionStorageDescriptor original = createOssDescriptor();
+        
+        String json = AgentVersionStorageDescriptorSerializer.serialize(original);
+        
+        assertTrue(json.contains("\"provider\":\"oss\""));
+        assertTrue(json.contains("\"format\":\"zip\""));
+        assertTrue(json.contains("\"artifactKey\":\"public/agent/agent/1.0.0/bundle.zip\""));
+        assertFalse(json.contains("\"key\":"));
+        AgentVersionStorageDescriptor restored =
+            AgentVersionStorageDescriptorSerializer.deserialize(json);
+        assertDescriptorEquals(original, restored);
+    }
+    
+    @Test
     void testCustomProviderMayOmitProviderSpecificFields() {
         AgentVersionStorageDescriptor descriptor = createNacosConfigDescriptor();
         descriptor.setProvider("object_store-v2");
@@ -217,6 +232,14 @@ class AgentVersionStorageDescriptorSerializerTest {
         assertRejected(null, descriptor -> descriptor.setAgentNameCodec("other"));
     }
     
+    @Test
+    void testRejectInvalidOssProviderContract() {
+        assertOssRejected(descriptor -> descriptor.setFormat(null));
+        assertOssRejected(descriptor -> descriptor.setFormat("json"));
+        assertOssRejected(descriptor -> descriptor.setArtifactKey(null));
+        assertOssRejected(descriptor -> descriptor.setKey("raw-json-key"));
+    }
+    
     private void assertRejected(String provider, DescriptorMutation mutation) {
         AgentVersionStorageDescriptor descriptor = createNacosConfigDescriptor();
         if (provider != null) {
@@ -227,10 +250,19 @@ class AgentVersionStorageDescriptorSerializerTest {
             () -> AgentVersionStorageDescriptorSerializer.serialize(descriptor));
     }
     
+    private void assertOssRejected(DescriptorMutation mutation) {
+        AgentVersionStorageDescriptor descriptor = createOssDescriptor();
+        mutation.apply(descriptor);
+        assertThrows(IllegalArgumentException.class,
+            () -> AgentVersionStorageDescriptorSerializer.serialize(descriptor));
+    }
+    
     private void assertDescriptorEquals(AgentVersionStorageDescriptor expected,
         AgentVersionStorageDescriptor actual) {
         assertEquals(expected.getProvider(), actual.getProvider());
         assertEquals(expected.getKey(), actual.getKey());
+        assertEquals(expected.getFormat(), actual.getFormat());
+        assertEquals(expected.getArtifactKey(), actual.getArtifactKey());
         assertEquals(expected.getKeyFormat(), actual.getKeyFormat());
         assertEquals(expected.getAgentNameCodec(), actual.getAgentNameCodec());
         assertEquals(expected.getContentDigest(), actual.getContentDigest());
@@ -250,6 +282,17 @@ class AgentVersionStorageDescriptorSerializerTest {
         result.setMediaType(AgentVersionStorageDescriptorSerializer.AGENT_VERSION_MEDIA_TYPE);
         result.setSchemaVersion(AgentVersionStorageDescriptorSerializer.SCHEMA_VERSION);
         result.setSize(128L);
+        return result;
+    }
+    
+    private AgentVersionStorageDescriptor createOssDescriptor() {
+        AgentVersionStorageDescriptor result = createNacosConfigDescriptor();
+        result.setProvider("oss");
+        result.setKey(null);
+        result.setFormat("zip");
+        result.setArtifactKey("public/agent/agent/1.0.0/bundle.zip");
+        result.setKeyFormat(null);
+        result.setAgentNameCodec(null);
         return result;
     }
     

@@ -62,6 +62,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -75,6 +76,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -359,6 +361,23 @@ class AgentPersistenceServiceTest {
         verify(versionPersistService, never()).insert(any(AiResourceVersion.class));
         verify(resourcePersistService, never()).insert(any(AiResource.class));
         verify(storageService, never()).save(any(PreparedAgentVersionWrite.class));
+    }
+    
+    @Test
+    void testStorageDescriptorComparisonIncludesOssArtifactPointer() {
+        AgentVersionStorageDescriptor expected = ossDescriptor("public/agent/a/1.0.0/bundle.zip");
+        AgentVersionStorageDescriptor actual = ossDescriptor("public/agent/a/1.0.0/bundle.zip");
+        
+        assertTrue((Boolean) ReflectionTestUtils.invokeMethod(service, "sameStorageDescriptor",
+            actual, expected));
+        
+        actual.setArtifactKey("public/agent/a/2.0.0/bundle.zip");
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(service, "sameStorageDescriptor",
+            actual, expected));
+        actual.setArtifactKey(expected.getArtifactKey());
+        actual.setFormat("other");
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(service, "sameStorageDescriptor",
+            actual, expected));
     }
     
     @Test
@@ -2527,6 +2546,17 @@ class AgentPersistenceServiceTest {
         AgentVersionStorageDescriptor descriptor = prepared.getDescriptor();
         mutation.accept(descriptor);
         result.setStorage(AgentVersionStorageDescriptorSerializer.serialize(descriptor));
+        return result;
+    }
+    
+    private AgentVersionStorageDescriptor ossDescriptor(String artifactKey) {
+        AgentVersionStorageDescriptor result = prepared.getDescriptor();
+        result.setProvider("oss");
+        result.setKey(null);
+        result.setFormat("zip");
+        result.setArtifactKey(artifactKey);
+        result.setKeyFormat(null);
+        result.setAgentNameCodec(null);
         return result;
     }
     
