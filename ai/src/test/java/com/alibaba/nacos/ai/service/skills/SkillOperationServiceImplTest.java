@@ -114,6 +114,9 @@ class SkillOperationServiceImplTest {
     private AiResourceStorage storage;
     
     @Mock
+    private AiResourceStorage ossStorage;
+    
+    @Mock
     private AiResourcePersistService aiResourcePersistService;
     
     @Mock
@@ -139,7 +142,9 @@ class SkillOperationServiceImplTest {
         EnvUtil.setEnvironment(new StandardEnvironment());
         AiResourceStorageRouter.reset();
         lenient().when(storage.type()).thenReturn("nacos_config");
+        lenient().when(ossStorage.type()).thenReturn("oss");
         AiResourceStorageRouter.join(storage);
+        AiResourceStorageRouter.join(ossStorage);
         PublishPipelineManager pipelineManager = TestAiPipelineSupport.newManager(false,
             List.of(), List.of());
         PublishPipelineExecutor publishPipelineExecutor = new PublishPipelineExecutor(
@@ -163,6 +168,8 @@ class SkillOperationServiceImplTest {
             visibilityManagerStatic.close();
         }
         System.clearProperty(AUTO_PUBLISH_AFTER_REVIEW_ENABLED_KEY);
+        System.clearProperty(
+            com.alibaba.nacos.ai.constant.Constants.Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY);
         TestAiPipelineSupport.clearStateChecker();
         EnvUtil.setEnvironment(CACHED_ENVIRONMENT);
     }
@@ -2280,15 +2287,50 @@ class SkillOperationServiceImplTest {
             new com.alibaba.nacos.ai.model.AiResourceVersion();
         vRow.setVersion(version);
         vRow.setStorage(
-            "{\"provider\":\"nacos_config\",\"scope\":\"test-ns:test-skill:v1\",\"files\":[\"SKILL.md\"]}");
+            "{\"provider\":\"oss\",\"scope\":\"test-ns:test-skill:v1\",\"files\":[\"SKILL.md\"]}");
         when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
             eq(version)))
             .thenReturn(vRow);
-        when(storage.get(any(StorageKey.class))).thenReturn(
+        when(ossStorage.get(any(StorageKey.class))).thenReturn(
             ("---\nname: test-skill\ndescription: desc\n---\n\nbody").getBytes());
         Skill result = skillOperationService.getSkillVersionDetail(namespaceId, skillName, version);
         assertNotNull(result);
         assertEquals("test-skill", result.getName());
+        verify(ossStorage).get(argThat(key -> "oss".equals(key.getProvider())));
+        verify(storage, never()).get(any(StorageKey.class));
+    }
+    
+    @Test
+    void testGetSkillVersionDetailUsesNacosConfigForLegacyStorage() throws NacosException {
+        String namespaceId = "test-ns";
+        String skillName = "test-skill";
+        String version = "v1";
+        AiResource meta = new AiResource();
+        meta.setName(skillName);
+        meta.setType("skill");
+        meta.setStatus("enable");
+        meta.setScope(VisibilityConstants.SCOPE_PUBLIC);
+        when(aiResourcePersistService.find(eq(namespaceId), eq(skillName), anyString()))
+            .thenReturn(meta);
+        com.alibaba.nacos.ai.model.AiResourceVersion vRow =
+            new com.alibaba.nacos.ai.model.AiResourceVersion();
+        vRow.setVersion(version);
+        vRow.setStorage(
+            "{\"scope\":\"test-ns:test-skill:v1\",\"files\":[\"SKILL.md\"]}");
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
+            eq(version)))
+            .thenReturn(vRow);
+        System.setProperty(
+            com.alibaba.nacos.ai.constant.Constants.Skills.SKILL_STORAGE_PROVIDER_CONFIG_KEY,
+            "oss");
+        when(storage.get(any(StorageKey.class))).thenReturn(
+            ("---\nname: test-skill\ndescription: desc\n---\n\nbody").getBytes());
+        
+        Skill result = skillOperationService.getSkillVersionDetail(namespaceId, skillName, version);
+        
+        assertNotNull(result);
+        verify(storage).get(argThat(key -> "nacos_config".equals(key.getProvider())));
+        verify(ossStorage, never()).get(any(StorageKey.class));
     }
     
     @Test
@@ -2443,7 +2485,7 @@ class SkillOperationServiceImplTest {
         vRow.setVersion("v1");
         vRow.setStatus("draft");
         vRow.setStorage(
-            "{\"provider\":\"nacos_config\",\"scope\":\"ns:s:v1\",\"files\":[\"SKILL.md\"]}");
+            "{\"provider\":\"oss\",\"scope\":\"ns:s:v1\",\"files\":[\"SKILL.md\"]}");
         when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
             eq("v1")))
             .thenReturn(vRow);
@@ -2454,6 +2496,8 @@ class SkillOperationServiceImplTest {
         skillOperationService.deleteDraft(namespaceId, skillName);
         verify(aiResourceVersionPersistService).delete(eq(namespaceId), eq(skillName), anyString(),
             eq("v1"));
+        verify(ossStorage).delete(argThat(key -> "oss".equals(key.getProvider())));
+        verify(storage, never()).delete(any(StorageKey.class));
     }
     
     @Test
@@ -2866,11 +2910,21 @@ class SkillOperationServiceImplTest {
         manifest.setVersions(new HashMap<>(Map.of("v1", List.of("SKILL.md"))));
         manifest.setLabels(new HashMap<>(Map.of("latest", "v1")));
         when(manifestService.query(eq(namespaceId), eq(skillName))).thenReturn(manifest);
-        when(storage.get(any(StorageKey.class))).thenReturn(
+        com.alibaba.nacos.ai.model.AiResourceVersion vRow =
+            new com.alibaba.nacos.ai.model.AiResourceVersion();
+        vRow.setVersion("v1");
+        vRow.setStorage(
+            "{\"provider\":\"oss\",\"scope\":\"test-ns:my-skill:v1\",\"files\":[\"SKILL.md\"]}");
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
+            eq("v1")))
+            .thenReturn(vRow);
+        when(ossStorage.get(any(StorageKey.class))).thenReturn(
             ("---\nname: my-skill\ndescription: desc\n---\n\nbody").getBytes());
         Skill result = skillOperationService.querySkill(namespaceId, skillName, null, null);
         assertNotNull(result);
         assertEquals("my-skill", result.getName());
+        verify(ossStorage).get(argThat(key -> "oss".equals(key.getProvider())));
+        verify(storage, never()).get(any(StorageKey.class));
     }
     
     @Test
