@@ -164,8 +164,8 @@ OSS 的 1,023 字节限制。
 
 因此默认 prefix 下的物理 object key 为
 `nacos/ai/{namespaceId}/skill/{skillName}/{version}/bundle.zip`。该层级以 namespace 为第一层
-隔离边界，以 AI resource type 为第二层管理边界。它只适用于 storage descriptor 明确记录的
-ZIP artifact；历史逐文件 key 不得由 provider 重写，仍按原不透明 key 访问。
+隔离边界，以 AI resource type 为第二层管理边界。Skill 的 OSS 存储仅支持 storage descriptor
+明确记录的 ZIP artifact，不定义逐文件 OSS key 或双读兼容。
 
 该 provider 必须精确保留字节、将不存在的对象视为缺失，并保持删除幂等。由于存储 SPI 返回
 `byte[]`，读写两侧都必须执行可配置的内存对象大小限制。OSS 的 object PUT、GET 和 DELETE

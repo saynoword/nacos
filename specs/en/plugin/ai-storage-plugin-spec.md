@@ -198,8 +198,8 @@ With the default prefix, the physical object key is
 `nacos/ai/{namespaceId}/skill/{skillName}/{version}/bundle.zip`. This hierarchy
 uses namespace as the first isolation boundary and AI resource type as the
 second management boundary. It applies only to ZIP artifacts explicitly
-recorded by the storage descriptor. The provider must not rewrite historical
-per-file keys and must continue to access them as their original opaque keys.
+recorded by the storage descriptor. Skill OSS storage does not define per-file
+OSS keys or dual-read compatibility.
 
 The provider preserves bytes exactly, treats missing objects as absent, and
 keeps delete idempotent. It enforces a configurable in-memory object-size limit

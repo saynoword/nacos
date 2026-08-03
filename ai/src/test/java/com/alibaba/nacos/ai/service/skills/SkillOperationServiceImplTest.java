@@ -2302,7 +2302,7 @@ class SkillOperationServiceImplTest {
     // ========== Coverage gap tests ==========
     
     @Test
-    void testGetSkillVersionDetailSuccess() throws NacosException {
+    void testGetSkillVersionDetailRejectsNonBundleOssStorage() throws NacosException {
         String namespaceId = "test-ns";
         String skillName = "test-skill";
         String version = "v1";
@@ -2321,12 +2321,12 @@ class SkillOperationServiceImplTest {
         when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
             eq(version)))
             .thenReturn(vRow);
-        when(ossStorage.get(any(StorageKey.class))).thenReturn(
-            ("---\nname: test-skill\ndescription: desc\n---\n\nbody").getBytes());
-        Skill result = skillOperationService.getSkillVersionDetail(namespaceId, skillName, version);
-        assertNotNull(result);
-        assertEquals("test-skill", result.getName());
-        verify(ossStorage).get(argThat(key -> "oss".equals(key.getProvider())));
+        
+        NacosException exception = assertThrows(NacosException.class,
+            () -> skillOperationService.getSkillVersionDetail(namespaceId, skillName, version));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        verify(ossStorage, never()).get(any(StorageKey.class));
         verify(storage, never()).get(any(StorageKey.class));
     }
     
@@ -2589,7 +2589,7 @@ class SkillOperationServiceImplTest {
         vRow.setVersion("v1");
         vRow.setStatus("draft");
         vRow.setStorage(
-            "{\"provider\":\"oss\",\"scope\":\"ns:s:v1\",\"files\":[\"SKILL.md\"]}");
+            "{\"provider\":\"nacos_config\",\"scope\":\"ns:s:v1\",\"files\":[\"SKILL.md\"]}");
         when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
             eq("v1")))
             .thenReturn(vRow);
@@ -2600,8 +2600,8 @@ class SkillOperationServiceImplTest {
         skillOperationService.deleteDraft(namespaceId, skillName);
         verify(aiResourceVersionPersistService).delete(eq(namespaceId), eq(skillName), anyString(),
             eq("v1"));
-        verify(ossStorage).delete(argThat(key -> "oss".equals(key.getProvider())));
-        verify(storage, never()).delete(any(StorageKey.class));
+        verify(storage).delete(argThat(key -> "nacos_config".equals(key.getProvider())));
+        verify(ossStorage, never()).delete(any(StorageKey.class));
     }
     
     @Test
@@ -2633,6 +2633,36 @@ class SkillOperationServiceImplTest {
         
         verify(ossStorage).delete(argThat(key -> "oss".equals(key.getProvider())
             && "test-ns/skill/my-skill/v1/bundle.zip".equals(key.getKey())));
+        verify(storage, never()).delete(any(StorageKey.class));
+    }
+    
+    @Test
+    void testDeleteDraftDoesNotFallbackForNonBundleOssStorage() throws NacosException {
+        String namespaceId = "test-ns";
+        String skillName = "my-skill";
+        AiResource meta = new AiResource();
+        meta.setName(skillName);
+        meta.setType("skill");
+        meta.setNamespaceId(namespaceId);
+        meta.setStatus("enable");
+        meta.setMetaVersion(1L);
+        meta.setVersionInfo("{\"editingVersion\":\"v1\",\"labels\":{},\"onlineCnt\":0}");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(skillName), anyString()))
+            .thenReturn(meta);
+        com.alibaba.nacos.ai.model.AiResourceVersion vRow =
+            new com.alibaba.nacos.ai.model.AiResourceVersion();
+        vRow.setVersion("v1");
+        vRow.setStatus("draft");
+        vRow.setStorage(
+            "{\"provider\":\"oss\",\"scope\":\"ns:s:v1\",\"files\":[\"SKILL.md\"]}");
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
+            eq("v1"))).thenReturn(vRow);
+        when(aiResourcePersistService.updateMetaCas(eq(namespaceId), eq(skillName), eq("skill"),
+            eq(1L), any())).thenReturn(true);
+        
+        skillOperationService.deleteDraft(namespaceId, skillName);
+        
+        verify(ossStorage, never()).delete(any(StorageKey.class));
         verify(storage, never()).delete(any(StorageKey.class));
     }
     
@@ -3030,7 +3060,7 @@ class SkillOperationServiceImplTest {
     }
     
     @Test
-    void testQuerySkillSuccess() throws NacosException {
+    void testQuerySkillSuccess() throws Exception {
         String namespaceId = "test-ns";
         String skillName = "my-skill";
         AiResource meta = new AiResource();
@@ -3049,17 +3079,22 @@ class SkillOperationServiceImplTest {
         com.alibaba.nacos.ai.model.AiResourceVersion vRow =
             new com.alibaba.nacos.ai.model.AiResourceVersion();
         vRow.setVersion("v1");
-        vRow.setStorage(
-            "{\"provider\":\"oss\",\"scope\":\"test-ns:my-skill:v1\",\"files\":[\"SKILL.md\"]}");
+        vRow.setStorage("{\"provider\":\"oss\",\"format\":\"zip\","
+            + "\"artifactKey\":\"test-ns/skill/my-skill/v1/bundle.zip\","
+            + "\"files\":[\"SKILL.md\"]}");
         when(aiResourceVersionPersistService.find(eq(namespaceId), eq(skillName), anyString(),
             eq("v1")))
             .thenReturn(vRow);
-        when(ossStorage.get(any(StorageKey.class))).thenReturn(
-            ("---\nname: my-skill\ndescription: desc\n---\n\nbody").getBytes());
+        Skill stored = new Skill();
+        stored.setName(skillName);
+        stored.setDescription("desc");
+        stored.setSkillMd("---\nname: my-skill\ndescription: desc\n---\n\nbody");
+        when(ossStorage.get(any(StorageKey.class))).thenReturn(SkillUtils.toZipBytes(stored));
         Skill result = skillOperationService.querySkill(namespaceId, skillName, null, null);
         assertNotNull(result);
         assertEquals("my-skill", result.getName());
-        verify(ossStorage).get(argThat(key -> "oss".equals(key.getProvider())));
+        verify(ossStorage).get(argThat(key -> "oss".equals(key.getProvider())
+            && "test-ns/skill/my-skill/v1/bundle.zip".equals(key.getKey())));
         verify(storage, never()).get(any(StorageKey.class));
     }
     

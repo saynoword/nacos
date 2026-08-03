@@ -185,9 +185,10 @@ one ZIP artifact. The artifact uses this fixed logical key:
 `ai_resource_version.storage` must record `provider=oss`, `format=zip`, an
 `artifactKey` without the OSS prefix, the logical `files` list, and the content
 digest. `files` remains the manifest and package-boundary description; it does
-not imply that OSS contains one object per file. Historical descriptors without
-`format=zip` continue to use the per-file read and delete format and must remain
-valid after ZIP artifacts are enabled.
+not imply that OSS contains one object per file. Skills with `provider=oss`
+support only `format=zip`; no per-file OSS format, dual-read behavior, or
+migration compatibility is defined. An OSS descriptor without `format=zip` or
+`artifactKey` is invalid.
 
 Skill also maintains a lightweight manifest for client-side discovery. The
 manifest is an index derived from Skill metadata and must not become the source

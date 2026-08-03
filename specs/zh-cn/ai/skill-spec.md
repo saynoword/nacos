@@ -146,8 +146,8 @@ AI 存储保存。默认存储为 `nacos_config`，但它只是实现后端。
 
 `ai_resource_version.storage` 必须记录 `provider=oss`、`format=zip`、不包含 OSS prefix 的
 `artifactKey`、逻辑文件列表 `files` 和内容摘要。`files` 继续用于 manifest 和文件边界描述，
-不表示 OSS 中存在对应的逐文件对象。缺少 `format=zip` 的历史描述仍按逐文件格式读取和删除，
-不得因启用 ZIP artifact 而失效。
+不表示 OSS 中存在对应的逐文件对象。`provider=oss` 的 Skill 仅支持 `format=zip`，不定义逐文件
+OSS 格式、双读或迁移兼容；缺少 `format=zip` 或 `artifactKey` 的 OSS 存储描述无效。
 
 Skill 还维护一个轻量 manifest 以支持客户端发现。Manifest 是从 Skill 元数据派生的
 索引，不应成为生命周期状态的事实来源。
