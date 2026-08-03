@@ -149,6 +149,21 @@ nacos.plugin.ai-storage.{provider}.{itemKey}
 Storage builder 负责在核心插件发现前构造 service。统一配置元数据和 apply 行为属于构建后的
 service 实例，不属于 builder 或领域路由 key。
 
+## OSS Provider
+
+内置 `oss` provider 必须通过 Java SDK 直接访问阿里云 OSS，不依赖 OSS 文件系统挂载。
+一个已配置 bucket 保存该 provider 的对象。物理 object key 由规范化后的可选 prefix、`/`
+和不透明的 `StorageKey.key` 组成；prefix 为空时直接使用不透明 key。Object key 必须满足
+OSS 的 1,023 字节限制。
+
+该 provider 必须精确保留字节、将不存在的对象视为缺失，并保持删除幂等。由于存储 SPI 返回
+`byte[]`，读写两侧都必须执行可配置的内存对象大小限制。OSS 的 object PUT、GET 和 DELETE
+操作是强一致的。备份、bucket versioning、生命周期和跨 bucket 迁移由运维方负责；provider
+不得创建或修改 bucket policy。
+
+客户端、管理端和控制台 API 不得返回 OSS URL 或物理 key，普通日志也不得记录这些信息。
+已有 API 契约继续由 Nacos 返回结构化详情或 ZIP 字节。
+
 ## 要求
 
 存储插件必须精确保留字节内容，不得改变资源元数据、版本状态、

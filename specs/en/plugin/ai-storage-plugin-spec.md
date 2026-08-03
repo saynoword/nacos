@@ -180,6 +180,25 @@ The storage builder is responsible for constructing the service before core
 plugin discovery. Unified configuration metadata and apply behavior belong to
 the built service instance, not to the builder or the domain routing keys.
 
+## OSS Provider
+
+The built-in `oss` provider accesses Alibaba Cloud OSS directly through the
+Java SDK. It must not depend on an OSS filesystem mount. One configured bucket
+owns the provider's objects. The physical object key is the normalized optional
+prefix followed by `/` and the opaque `StorageKey.key`; an empty prefix uses the
+opaque key directly. Object keys must satisfy the OSS 1,023-byte limit.
+
+The provider preserves bytes exactly, treats missing objects as absent, and
+keeps delete idempotent. It enforces a configurable in-memory object-size limit
+on both writes and reads because the storage SPI returns `byte[]`. OSS object
+PUT, GET, and DELETE operations are strongly consistent. Backup, bucket
+versioning, lifecycle, and cross-bucket migration remain operator-managed; the
+provider does not create or mutate bucket policy.
+
+OSS URLs and physical keys must not be returned by client, admin, or console
+APIs and must not be written to ordinary logs. Existing API contracts continue
+to return structured detail or ZIP bytes through Nacos.
+
 ## Requirements
 
 Storage plugins must preserve byte content exactly. They must not change

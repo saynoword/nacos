@@ -128,6 +128,7 @@
         
         <!-- dependency version -->
         <nacos.logback.adapter.version>1.1.5</nacos.logback.adapter.version>
+        <aliyun.oss.version>3.18.5</aliyun.oss.version>
         <spring-boot-dependencies.version>4.0.6</spring-boot-dependencies.version>
 
         <commons-io.version>2.14.0</commons-io.version>
@@ -1024,6 +1025,11 @@
             </dependency>
             
             <!-- Third-party libs -->
+            <dependency>
+                <groupId>com.aliyun.oss</groupId>
+                <artifactId>aliyun-sdk-oss</artifactId>
+                <version>${aliyun.oss.version}</version>
+            </dependency>
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>
                 <artifactId>jjwt-api</artifactId>
