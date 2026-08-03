@@ -44,7 +44,7 @@ AI 存储插件抽象 AI 资源的二进制或文本内容存储。元数据仍�
 | Builder 方法 | 要求 |
 |--------------|------|
 | `type()` | 稳定存储提供者类型。 |
-| `build()` | 构造 `AiResourceStorage`。 |
+| `build()` | 构造 `AiResourceStorage`；可选 provider 未通过静态配置启用发现时返回 null。 |
 
 存储服务实现：
 
@@ -138,9 +138,9 @@ AI storage 实现需要在 context refresh 期间使用 Spring 管理的服务�
 pre-refresh critical 校验。storage builder 注册完实例后，统一插件管理器必须立即执行相同的
 provider 级校验，并且必须在 Nacos 报告启动成功前完成。
 
-`AiResourceStorage` 统一继承 `PluginConfigSpec`。内置 provider 没有私有配置、不声明
-definitions，并以 `configurable=false` 暴露。拥有私有配置的构建结果通过继承契约声明
-definitions 和配置回调，并使用以下标准 key：
+`AiResourceStorage` 统一继承 `PluginConfigSpec`。内置 `nacos_config` provider 没有私有配置、
+不声明 definitions，并以 `configurable=false` 暴露。拥有私有配置的构建结果通过继承契约
+声明 definitions 和配置回调，并使用以下标准 key：
 
 ```properties
 nacos.plugin.ai-storage.{provider}.{itemKey}
@@ -160,6 +160,30 @@ OSS 的 1,023 字节限制。
 `byte[]`，读写两侧都必须执行可配置的内存对象大小限制。OSS 的 object PUT、GET 和 DELETE
 操作是强一致的。备份、bucket versioning、生命周期和跨 bucket 迁移由运维方负责；provider
 不得创建或修改 bucket policy。
+
+OSS provider 使用以下私有配置，所有配置项的 effect mode 均为 `RESTART`。为了让可选 builder
+在启动时被发现，endpoint 和 bucket 属性必须存在于 Nacos 静态环境中；其他配置可以由统一插件
+有效配置提供。
+
+| 标准属性 | 必填 | 默认值 | 敏感 | 含义 |
+|----------|------|--------|------|------|
+| `nacos.plugin.ai-storage.oss.endpoint` | 是 | 无 | 否 | OSS SDK endpoint。 |
+| `nacos.plugin.ai-storage.oss.bucket-name` | 是 | 无 | 否 | 保存 AI 资源对象的 bucket。 |
+| `nacos.plugin.ai-storage.oss.object-prefix` | 否 | `nacos/ai` | 否 | 规范化后的 object key 前缀。 |
+| `nacos.plugin.ai-storage.oss.max-object-size` | 否 | `52428800` | 否 | 允许上传和下载的最大字节数。 |
+| `nacos.plugin.ai-storage.oss.access-key-id` | 否 | 空 | 是 | 静态 AccessKey ID。 |
+| `nacos.plugin.ai-storage.oss.access-key-secret` | 否 | 空 | 是 | 静态 AccessKey Secret。 |
+| `nacos.plugin.ai-storage.oss.security-token` | 否 | 空 | 是 | 与静态 AccessKey 配套的 token。 |
+| `nacos.plugin.ai-storage.oss.ram-role-name` | 否 | 空 | 否 | ECS 实例 RAM role 名称。 |
+
+凭据选择顺序固定：优先使用完整的静态 AccessKey；否则使用已配置的 ECS RAM role；两者都没有时，
+由 OSS SDK 环境变量 provider 读取 `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET` 和可选的
+`OSS_SESSION_TOKEN`。静态凭据不能只配置一项；security token 必须搭配静态凭据；静态凭据和
+RAM role 不能同时配置。
+
+`OssClientFactory` SPI 负责构造 OSS SDK client，并确定性地选择优先级最高的 factory。
+发行版可以通过更高优先级的 factory 接入托管凭据、内网 endpoint 或监控，但必须复用唯一的
+`ai-storage:oss` service，不能再注册相同 provider type 的另一份存储实现。
 
 客户端、管理端和控制台 API 不得返回 OSS URL 或物理 key，普通日志也不得记录这些信息。
 已有 API 契约继续由 Nacos 返回结构化详情或 ZIP 字节。

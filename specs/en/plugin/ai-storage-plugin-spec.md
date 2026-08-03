@@ -48,7 +48,7 @@ Storage implementations are created by `AiResourceStorageBuilder`.
 | Builder method | Requirement |
 |----------------|-------------|
 | `type()` | Stable storage provider type. |
-| `build()` | Build an `AiResourceStorage`. |
+| `build()` | Build an `AiResourceStorage`, or return null when an optional provider is not statically configured for discovery. |
 
 The storage service implements:
 
@@ -167,10 +167,10 @@ type does not participate in pre-refresh critical validation. The unified plugin
 the same provider-specific validation immediately after the storage builders register their
 instances and before Nacos reports startup success.
 
-`AiResourceStorage` extends `PluginConfigSpec`. The built-in provider has no private configuration,
-declares no definitions, and is exposed as `configurable=false`. A built storage implementation
-that owns private configuration declares definitions and callbacks through the inherited contract,
-using canonical keys under:
+`AiResourceStorage` extends `PluginConfigSpec`. The built-in `nacos_config` provider has no private
+configuration, declares no definitions, and is exposed as `configurable=false`. A built storage
+implementation that owns private configuration declares definitions and callbacks through the
+inherited contract, using canonical keys under:
 
 ```properties
 nacos.plugin.ai-storage.{provider}.{itemKey}
@@ -194,6 +194,35 @@ on both writes and reads because the storage SPI returns `byte[]`. OSS object
 PUT, GET, and DELETE operations are strongly consistent. Backup, bucket
 versioning, lifecycle, and cross-bucket migration remain operator-managed; the
 provider does not create or mutate bucket policy.
+
+The OSS provider has the following private configuration. Every item has
+`RESTART` effect mode. The endpoint and bucket properties must be present in
+the static Nacos environment so that the optional builder is discoverable;
+other values may be supplied by the unified effective plugin configuration.
+
+| Canonical property | Required | Default | Sensitive | Meaning |
+|--------------------|----------|---------|-----------|---------|
+| `nacos.plugin.ai-storage.oss.endpoint` | Yes | None | No | OSS SDK endpoint. |
+| `nacos.plugin.ai-storage.oss.bucket-name` | Yes | None | No | Bucket that owns AI resource objects. |
+| `nacos.plugin.ai-storage.oss.object-prefix` | No | `nacos/ai` | No | Normalized object-key prefix. |
+| `nacos.plugin.ai-storage.oss.max-object-size` | No | `52428800` | No | Maximum upload and download size in bytes. |
+| `nacos.plugin.ai-storage.oss.access-key-id` | No | Empty | Yes | Static access key ID. |
+| `nacos.plugin.ai-storage.oss.access-key-secret` | No | Empty | Yes | Static access key secret. |
+| `nacos.plugin.ai-storage.oss.security-token` | No | Empty | Yes | Token paired with static access keys. |
+| `nacos.plugin.ai-storage.oss.ram-role-name` | No | Empty | No | ECS instance RAM role name. |
+
+Credential selection is deterministic: a complete static access-key pair is
+used first, otherwise the configured ECS RAM role is used, otherwise the OSS
+SDK environment provider reads `OSS_ACCESS_KEY_ID`, `OSS_ACCESS_KEY_SECRET`,
+and optional `OSS_SESSION_TOKEN`. Partial static credentials are invalid. A
+security token requires static credentials, and static credentials cannot be
+combined with a RAM role.
+
+The `OssClientFactory` SPI owns OSS SDK client construction. The factory with
+the highest priority is selected deterministically. A distribution-specific
+factory may integrate managed credentials, internal endpoints, or monitoring,
+but must reuse the one `ai-storage:oss` service instead of registering another
+storage implementation with the same provider type.
 
 OSS URLs and physical keys must not be returned by client, admin, or console
 APIs and must not be written to ordinary logs. Existing API contracts continue

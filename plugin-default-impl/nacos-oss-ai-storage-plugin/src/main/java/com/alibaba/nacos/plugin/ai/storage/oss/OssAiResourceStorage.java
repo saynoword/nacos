@@ -17,6 +17,7 @@
 package com.alibaba.nacos.plugin.ai.storage.oss;
 
 import com.alibaba.nacos.api.exception.NacosException;
+import com.alibaba.nacos.api.plugin.ConfigItemDefinition;
 import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.plugin.ai.storage.model.StorageKey;
 import com.alibaba.nacos.plugin.ai.storage.spi.AiResourceStorage;
@@ -31,6 +32,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -49,13 +53,18 @@ public class OssAiResourceStorage implements AiResourceStorage {
     
     private static final int BUFFER_SIZE = 8192;
     
-    private final OSS ossClient;
+    private final OssClientFactory clientFactory;
     
-    private final String bucketName;
+    private volatile RuntimeState state;
     
-    private final String objectPrefix;
-    
-    private final long maxObjectSize;
+    /**
+     * Construct a configurable OSS storage implementation.
+     *
+     * @param clientFactory OSS client factory
+     */
+    public OssAiResourceStorage(OssClientFactory clientFactory) {
+        this.clientFactory = Objects.requireNonNull(clientFactory, "clientFactory");
+    }
     
     /**
      * Construct the OSS storage implementation.
@@ -67,16 +76,16 @@ public class OssAiResourceStorage implements AiResourceStorage {
      */
     public OssAiResourceStorage(OSS ossClient, String bucketName, String objectPrefix,
         long maxObjectSize) {
-        this.ossClient = Objects.requireNonNull(ossClient, "ossClient");
+        OSS actualClient = Objects.requireNonNull(ossClient, "ossClient");
         if (StringUtils.isBlank(bucketName)) {
             throw new IllegalArgumentException("bucketName is blank");
         }
         if (maxObjectSize <= 0) {
             throw new IllegalArgumentException("maxObjectSize must be positive");
         }
-        this.bucketName = bucketName.trim();
-        this.objectPrefix = normalizePrefix(objectPrefix);
-        this.maxObjectSize = maxObjectSize;
+        this.clientFactory = null;
+        this.state = new RuntimeState(actualClient, bucketName.trim(),
+            normalizePrefix(objectPrefix), maxObjectSize, Collections.emptyMap());
     }
     
     @Override
@@ -85,15 +94,48 @@ public class OssAiResourceStorage implements AiResourceStorage {
     }
     
     @Override
+    public List<ConfigItemDefinition> getConfigDefinitions() {
+        return OssStorageConfig.definitions();
+    }
+    
+    @Override
+    public synchronized void applyConfig(Map<String, String> effectiveConfig) {
+        OssStorageConfig config = OssStorageConfig.from(effectiveConfig);
+        Map<String, String> currentConfig = config.toMap();
+        RuntimeState oldState = state;
+        if (oldState != null && oldState.currentConfig.equals(currentConfig)) {
+            return;
+        }
+        if (clientFactory == null) {
+            throw new IllegalStateException(
+                "Directly initialized OSS storage cannot be reconfigured");
+        }
+        OSS newClient = Objects.requireNonNull(clientFactory.create(config),
+            "OSS client factory returned null");
+        state = new RuntimeState(newClient, config.getBucketName(),
+            normalizePrefix(config.getObjectPrefix()), config.getMaxObjectSize(), currentConfig);
+        if (oldState != null) {
+            oldState.ossClient.shutdown();
+        }
+    }
+    
+    @Override
+    public Map<String, String> getCurrentConfig() {
+        RuntimeState current = state;
+        return current == null ? Collections.emptyMap() : current.currentConfig;
+    }
+    
+    @Override
     public void save(StorageKey storageKey, byte[] content) throws NacosException {
-        String objectKey = buildObjectKey(storageKey);
+        RuntimeState current = requireState();
+        String objectKey = buildObjectKey(storageKey, current.objectPrefix);
         byte[] actualContent = content == null ? new byte[0] : content;
-        if (actualContent.length > maxObjectSize) {
+        if (actualContent.length > current.maxObjectSize) {
             throw new NacosException(NacosException.INVALID_PARAM,
                 "AI resource content exceeds the OSS object size limit");
         }
         try (InputStream input = new ByteArrayInputStream(actualContent)) {
-            ossClient.putObject(bucketName, objectKey, input);
+            current.ossClient.putObject(current.bucketName, objectKey, input);
         } catch (OSSException | ClientException | IOException e) {
             throw storageException("save", e);
         }
@@ -101,13 +143,14 @@ public class OssAiResourceStorage implements AiResourceStorage {
     
     @Override
     public byte[] get(StorageKey storageKey) throws NacosException {
-        String objectKey = buildObjectKey(storageKey);
-        try (OSSObject ossObject = ossClient.getObject(bucketName, objectKey)) {
+        RuntimeState current = requireState();
+        String objectKey = buildObjectKey(storageKey, current.objectPrefix);
+        try (OSSObject ossObject = current.ossClient.getObject(current.bucketName, objectKey)) {
             if (ossObject == null) {
                 return null;
             }
-            validateContentLength(ossObject.getObjectMetadata());
-            return readContent(ossObject.getObjectContent());
+            validateContentLength(ossObject.getObjectMetadata(), current.maxObjectSize);
+            return readContent(ossObject.getObjectContent(), current.maxObjectSize);
         } catch (OSSException e) {
             if (NO_SUCH_KEY.equals(e.getErrorCode())) {
                 return null;
@@ -120,15 +163,25 @@ public class OssAiResourceStorage implements AiResourceStorage {
     
     @Override
     public void delete(StorageKey storageKey) throws NacosException {
-        String objectKey = buildObjectKey(storageKey);
+        RuntimeState current = requireState();
+        String objectKey = buildObjectKey(storageKey, current.objectPrefix);
         try {
-            ossClient.deleteObject(bucketName, objectKey);
+            current.ossClient.deleteObject(current.bucketName, objectKey);
         } catch (OSSException | ClientException e) {
             throw storageException("delete", e);
         }
     }
     
-    private String buildObjectKey(StorageKey storageKey) {
+    private RuntimeState requireState() throws NacosException {
+        RuntimeState current = state;
+        if (current == null) {
+            throw new NacosException(NacosException.SERVER_ERROR,
+                "OSS AI resource storage is not initialized");
+        }
+        return current;
+    }
+    
+    private String buildObjectKey(StorageKey storageKey, String objectPrefix) {
         if (storageKey == null || StringUtils.isBlank(storageKey.getKey())) {
             throw new IllegalArgumentException("StorageKey.key is blank");
         }
@@ -143,14 +196,16 @@ public class OssAiResourceStorage implements AiResourceStorage {
         return objectKey;
     }
     
-    private void validateContentLength(ObjectMetadata metadata) throws NacosException {
+    private void validateContentLength(ObjectMetadata metadata, long maxObjectSize)
+        throws NacosException {
         if (metadata != null && metadata.getContentLength() > maxObjectSize) {
             throw new NacosException(NacosException.SERVER_ERROR,
                 "OSS object exceeds the configured AI resource size limit");
         }
     }
     
-    private byte[] readContent(InputStream input) throws IOException, NacosException {
+    private byte[] readContent(InputStream input, long maxObjectSize)
+        throws IOException, NacosException {
         if (input == null) {
             return new byte[0];
         }
@@ -188,5 +243,27 @@ public class OssAiResourceStorage implements AiResourceStorage {
     private static NacosException storageException(String operation, Throwable cause) {
         return new NacosException(NacosException.SERVER_ERROR,
             "Failed to " + operation + " AI resource in OSS", cause);
+    }
+    
+    private static final class RuntimeState {
+        
+        private final OSS ossClient;
+        
+        private final String bucketName;
+        
+        private final String objectPrefix;
+        
+        private final long maxObjectSize;
+        
+        private final Map<String, String> currentConfig;
+        
+        private RuntimeState(OSS ossClient, String bucketName, String objectPrefix,
+            long maxObjectSize, Map<String, String> currentConfig) {
+            this.ossClient = ossClient;
+            this.bucketName = bucketName;
+            this.objectPrefix = objectPrefix;
+            this.maxObjectSize = maxObjectSize;
+            this.currentConfig = currentConfig;
+        }
     }
 }

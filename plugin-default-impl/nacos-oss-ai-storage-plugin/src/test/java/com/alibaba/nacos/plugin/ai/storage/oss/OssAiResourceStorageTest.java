@@ -33,16 +33,23 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -75,6 +82,56 @@ class OssAiResourceStorageTest {
     @Test
     void shouldExposeOssType() {
         assertEquals("oss", storage.type());
+    }
+    
+    @Test
+    void shouldExposeConfigurableDefinitions() {
+        assertEquals(8, storage.getConfigDefinitions().size());
+        assertTrue(storage.isConfigurable());
+        assertFalse(storage.getCurrentConfig().containsKey(OssStorageConfig.ACCESS_KEY_SECRET));
+    }
+    
+    @Test
+    void shouldRequireConfigurationBeforeStorageOperations() {
+        OssAiResourceStorage uninitialized =
+            new OssAiResourceStorage(config -> mock(OSS.class));
+        
+        NacosException exception =
+            assertThrows(NacosException.class, () -> uninitialized.get(STORAGE_KEY));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+    }
+    
+    @Test
+    void shouldApplyConfigurationOnlyWhenChanged() {
+        OssClientFactory clientFactory = mock(OssClientFactory.class);
+        when(clientFactory.create(any(OssStorageConfig.class))).thenReturn(ossClient);
+        OssAiResourceStorage configurable = new OssAiResourceStorage(clientFactory);
+        Map<String, String> config = effectiveConfig();
+        
+        configurable.applyConfig(config);
+        configurable.applyConfig(new HashMap<>(config));
+        
+        assertEquals(BUCKET, configurable.getCurrentConfig().get(OssStorageConfig.BUCKET_NAME));
+        verify(clientFactory, times(1)).create(any(OssStorageConfig.class));
+        verify(ossClient, never()).shutdown();
+    }
+    
+    @Test
+    void shouldReplaceClientAfterConfigurationChanges() {
+        OSS replacementClient = mock(OSS.class);
+        OssClientFactory clientFactory = mock(OssClientFactory.class);
+        when(clientFactory.create(any(OssStorageConfig.class)))
+            .thenReturn(ossClient, replacementClient);
+        OssAiResourceStorage configurable = new OssAiResourceStorage(clientFactory);
+        Map<String, String> config = effectiveConfig();
+        configurable.applyConfig(config);
+        config.put(OssStorageConfig.OBJECT_PREFIX, "another-prefix");
+        
+        configurable.applyConfig(config);
+        
+        verify(ossClient).shutdown();
+        verify(replacementClient, never()).shutdown();
     }
     
     @Test
@@ -202,6 +259,14 @@ class OssAiResourceStorageTest {
     void shouldRejectBlankStorageKey() {
         assertThrows(IllegalArgumentException.class,
             () -> storage.get(new StorageKey(OssAiResourceStorage.TYPE, " ")));
+    }
+    
+    private static Map<String, String> effectiveConfig() {
+        Map<String, String> result = new HashMap<>();
+        result.put(OssStorageConfig.ENDPOINT, "https://oss-cn-hangzhou.aliyuncs.com");
+        result.put(OssStorageConfig.BUCKET_NAME, BUCKET);
+        result.put(OssStorageConfig.MAX_OBJECT_SIZE, "16");
+        return result;
     }
     
 }
