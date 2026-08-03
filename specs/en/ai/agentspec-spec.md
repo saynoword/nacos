@@ -43,7 +43,13 @@ and resource references before writing a version.
 ## 3. Version Model
 
 AgentSpec uses the standard `ai_resource` and `ai_resource_version` model. It
-uses AI storage for `manifest.json` and resource files.
+uses AI storage for `manifest.json` and resource files. When `oss` is selected,
+the complete AgentSpec package follows the
+[AI Resource Model Spec](ai-resource-model-spec.md) and is stored as one
+`bundle.zip`; the manifest and resources must not become separate OSS objects.
+The version descriptor persists the provider, `format=zip`, and `artifactKey`,
+and reads, draft replacements, and deletes use that descriptor without a
+per-file OSS fallback.
 
 Unlike Skill, AgentSpec does not maintain a separate manifest index. Version
 metadata and storage pointers are authoritative.

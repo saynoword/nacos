@@ -127,7 +127,9 @@ AgentVersionContent
 ```
 
 服务端校验对象并构造下述存储投影，然后使用 Nacos 公共 JSON serializer 一次序列化为
-UTF-8。同一份输出 bytes 传递给 AI Storage，并用于计算 `size` 和
+UTF-8。`nacos_config` 直接保存该 JSON bytes；`oss` 按
+[AI 资源模型规范](ai-resource-model-spec.md)将它作为 `content.json` 放入单个 `bundle.zip`。
+最终传递给 AI Storage 的完整 artifact bytes 用于计算 `size` 和
 `contentDigest=sha256:<lowercase hex>`。Agent Storage 不定义 JSON 语义规范化：两个解析后
 等价的 JSON 表达不要求得到相同摘要。
 
@@ -153,7 +155,9 @@ Version 行的 `storage` JSON 包含：
 | 字段 | 值或含义 |
 | --- | --- |
 | `provider` | Storage provider；内置值为 `nacos_config`。 |
-| `key` | Provider opaque key。 |
+| `key` | 非 OSS provider 的 opaque key；`nacos_config` 必填。 |
+| `format` | OSS 固定为 `zip`。 |
+| `artifactKey` | OSS 固定 ZIP artifact 的 opaque key。 |
 | `keyFormat` | 内置 provider 使用 `agent-version-config-v1`。 |
 | `agentNameCodec` | 内置 provider 使用 `rad-ascii-v1`。 |
 | `contentDigest` | `sha256:<lowercase hex>`。 |
@@ -161,9 +165,11 @@ Version 行的 `storage` JSON 包含：
 | `schemaVersion` | `1`。 |
 | `size` | 持久化内容字节数。 |
 
-Agent service 生成统一的、provider-neutral 的逻辑 `StorageKey.key`，并将其作为 opaque 值
-传给所有 provider。替换 provider 时仍保持一个 Version 对应一个对象，并由 provider 管理
-该逻辑 key 到物理 key 的映射。内置 provider 使用第 3.2 节的映射。
+Agent service 根据新版本选中的 provider 生成稳定 opaque key。`nacos_config` 使用第 3.2 节的
+逻辑 key；`oss` 使用统一的
+`{encodedNamespaceId}/agent/{encodedAgentName}/{encodedVersion}/bundle.zip` artifact key。
+版本创建后，读取、草稿覆盖和删除始终使用持久化指针；当前 provider 配置不得重定向已有版本。
+Agent 不定义逐文件或原始 JSON 的 OSS 兼容格式。
 
 ### 3.2 内置 Nacos Config 映射
 

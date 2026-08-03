@@ -176,7 +176,9 @@ belongs to `nacos_config`.
 
 When a newly written version selects the `oss` provider, the server must parse,
 validate, and normalize the Skill package before storing the complete Skill as
-one ZIP artifact. The artifact uses this fixed logical key:
+one ZIP artifact under the unified contract in the
+[AI Resource Model Spec](ai-resource-model-spec.md). For typical names that do
+not require encoding, the artifact uses this logical key:
 
 ```text
 {namespaceId}/skill/{skillName}/{version}/bundle.zip

@@ -456,7 +456,6 @@
       "additionalProperties": false,
       "required": [
         "provider",
-        "key",
         "contentDigest",
         "mediaType",
         "schemaVersion",
@@ -473,7 +472,17 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 1024,
-          "description": "Provider-neutral logical key passed opaquely to the selected provider. It may exceed the physical Config data-id limit; upper layers must neither reject it for that reason nor parse public Agent identity from a physical fallback value."
+          "description": "Opaque key for non-OSS providers. The nacos_config logical key may exceed the physical Config data-id limit; upper layers must neither reject it for that reason nor parse public Agent identity from a physical fallback value."
+        },
+        "format": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "artifactKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
         },
         "keyFormat": {
           "type": "string",
@@ -501,6 +510,50 @@
         }
       },
       "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "oss"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "format",
+              "artifactKey"
+            ],
+            "properties": {
+              "format": {
+                "const": "zip"
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "key"
+                  ]
+                },
+                {
+                  "required": [
+                    "keyFormat"
+                  ]
+                },
+                {
+                  "required": [
+                    "agentNameCodec"
+                  ]
+                }
+              ]
+            }
+          },
+          "else": {
+            "required": [
+              "key"
+            ]
+          }
+        },
         {
           "if": {
             "properties": {

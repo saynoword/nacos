@@ -137,8 +137,9 @@ AI 存储保存。默认存储为 `nacos_config`，但它只是实现后端。
 按该版本已持久化的 provider 路由。Skill 存储 provider 配置只控制新写入，不得重定向已有
 版本。缺少 `provider` 的历史存储描述归属于 `nacos_config`。
 
-当新写入版本选择 `oss` provider 时，服务端必须先完成 Skill 包解析、校验和规范化，再将
-完整 Skill 保存为单个 ZIP artifact。该 artifact 使用固定逻辑 key：
+当新写入版本选择 `oss` provider 时，服务端必须先完成 Skill 包解析、校验和规范化，再按
+[AI 资源模型规范](ai-resource-model-spec.md)的统一契约将完整 Skill 保存为单个 ZIP artifact。
+对无需编码的典型名称，该 artifact 使用以下逻辑 key：
 
 ```text
 {namespaceId}/skill/{skillName}/{version}/bundle.zip

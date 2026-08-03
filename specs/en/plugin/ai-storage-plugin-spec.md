@@ -188,18 +188,22 @@ owns the provider's objects. The physical object key is the normalized optional
 prefix followed by `/` and the opaque `StorageKey.key`; an empty prefix uses the
 opaque key directly. Object keys must satisfy the OSS 1,023-byte limit.
 
-For a Skill stored as a ZIP artifact, a newly written `StorageKey.key` is:
+Prompt, Skill, AgentSpec, and Agent use one OSS ZIP artifact contract. A newly
+written `StorageKey.key` is:
 
 ```text
-{namespaceId}/skill/{skillName}/{version}/bundle.zip
+{encodedNamespaceId}/{resourceType}/{encodedResourceName}/{encodedVersion}/bundle.zip
 ```
 
-With the default prefix, the physical object key is
+For a typical Skill name that requires no encoding, the physical object key
+with the default prefix is
 `nacos/ai/{namespaceId}/skill/{skillName}/{version}/bundle.zip`. This hierarchy
 uses namespace as the first isolation boundary and AI resource type as the
-second management boundary. It applies only to ZIP artifacts explicitly
-recorded by the storage descriptor. Skill OSS storage does not define per-file
-OSS keys or dual-read compatibility.
+second management boundary. Path-segment encoding and the version descriptor
+contract are defined by the
+[AI Resource Model Spec](../ai/ai-resource-model-spec.md). OSS storage for all
+four AI resource types supports only ZIP artifacts explicitly recorded by the
+storage descriptor and defines no per-file OSS keys or dual-read compatibility.
 
 The provider preserves bytes exactly, treats missing objects as absent, and
 keeps delete idempotent. It enforces a configurable in-memory object-size limit

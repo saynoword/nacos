@@ -61,7 +61,14 @@ Prompt。如果 md5 与当前版本内容 md5 一致，服务端可以返回 not
 
 订阅应报告 Prompt 变更，但不应向运行时客户端暴露宽范围管理列表能力。
 
-## 5. 迁移
+## 5. 存储
+
+Prompt 遵循 [AI 资源模型规范](ai-resource-model-spec.md)的统一 OSS ZIP artifact 契约。
+选择 `oss` 的版本将完整 `PromptVersionInfo` 保存为单个 `bundle.zip`，归档内主条目为
+`content.json`。版本存储描述必须固化 provider、`format=zip` 和 `artifactKey`；读取、草稿覆盖和
+删除不得根据当前配置重新路由，也不得回退到逐文件 OSS 格式。
+
+## 6. 迁移
 
 Prompt 存在从旧 Prompt 存储迁移到
 `ai_resource + ai_resource_version + AI storage` 的迁移任务。迁移必须：
@@ -71,7 +78,7 @@ Prompt 存在从旧 Prompt 存储迁移到
 - 尽可能保留已有版本和 latest 行为；
 - 将旧映射保持为兼容存储，而不是正式 Config 语义。
 
-## 6. 演进说明
+## 7. 演进说明
 
 Prompt 格式、变量 schema、tool-call 约定和模型提供方要求可能快速变化。Prompt 规范
 调整可以引入新的内容字段或校验规则，但必须为已有 Prompt 保留版本化迁移路径。

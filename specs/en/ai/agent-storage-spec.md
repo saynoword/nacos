@@ -138,8 +138,11 @@ AgentVersionContent
 ```
 
 The server validates the object, creates the storage projection below, and
-serializes it once with the common Nacos JSON serializer as UTF-8. The exact
-emitted bytes are passed to AI Storage and are also used for `size` and
+serializes it once with the common Nacos JSON serializer as UTF-8.
+`nacos_config` stores those JSON bytes directly; `oss` follows the
+[AI Resource Model Spec](ai-resource-model-spec.md) and places them in a
+`content.json` entry inside one `bundle.zip`. The complete artifact bytes passed
+to AI Storage are used for `size` and
 `contentDigest=sha256:<lowercase hex>`. Agent storage does not define semantic
 JSON canonicalization: two JSON representations that decode to equivalent
 values are not required to produce the same digest.
@@ -168,7 +171,9 @@ The Version row's `storage` JSON contains:
 | Field | Value or meaning |
 | --- | --- |
 | `provider` | Storage provider; built-in value is `nacos_config`. |
-| `key` | Provider-opaque key. |
+| `key` | Opaque key for non-OSS providers; required for `nacos_config`. |
+| `format` | Fixed to `zip` for OSS. |
+| `artifactKey` | Opaque key of the fixed OSS ZIP artifact. |
 | `keyFormat` | `agent-version-config-v1` for the built-in provider. |
 | `agentNameCodec` | `rad-ascii-v1` for the built-in provider. |
 | `contentDigest` | `sha256:<lowercase hex>`. |
@@ -176,10 +181,14 @@ The Version row's `storage` JSON contains:
 | `schemaVersion` | `1`. |
 | `size` | Persisted content byte count. |
 
-The Agent service composes one provider-neutral logical `StorageKey.key` and
-passes it to every provider as an opaque value. A replacement provider keeps
-the one-Version/one-object rule and owns the mapping from that logical key to
-its physical key. The built-in provider uses the mapping in section 3.2.
+The Agent service composes a stable opaque key for the provider selected when a
+new version is created. `nacos_config` uses the logical key in section 3.2;
+`oss` uses the unified
+`{encodedNamespaceId}/agent/{encodedAgentName}/{encodedVersion}/bundle.zip`
+artifact key. After creation, reads, draft replacements, and deletes always use
+the persisted pointer; current provider configuration must not redirect an
+existing version. Agent defines no per-file or raw-JSON OSS compatibility
+format.
 
 ### 3.2 Built-in Nacos Config Mapping
 

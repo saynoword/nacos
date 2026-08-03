@@ -41,7 +41,10 @@ AgentSpec upload 接收 ZIP 包。解析器必须先校验 manifest 和资源引
 ## 3. 版本模型
 
 AgentSpec 使用标准 `ai_resource` 和 `ai_resource_version` 模型。它通过 AI 存储保存
-`manifest.json` 和资源文件。
+`manifest.json` 和资源文件。选择 `oss` 时，完整 AgentSpec 包必须遵循
+[AI 资源模型规范](ai-resource-model-spec.md)保存为单个 `bundle.zip`，不得把 manifest 和资源拆成
+多个 OSS 对象。版本描述必须固化 provider、`format=zip` 和 `artifactKey`，读取、草稿覆盖和
+删除使用该持久化描述，不得回退到逐文件 OSS 格式。
 
 不同于 Skill，AgentSpec 不维护独立 manifest index。版本元数据和存储指针是事实来源。
 

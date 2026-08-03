@@ -100,6 +100,25 @@ Labels 不得指向 draft 或 reviewing 版本。运行时客户端可以通过�
 默认存储实现基于 Nacos Config，但 Config 在这里只是存储后端。通过
 `nacos_config` 保存的 AI 内容不应被视为用户拥有的 Config 资源。
 
+Prompt、Skill、AgentSpec 和 Agent 选择 `oss` provider 时必须使用同一个版本级 artifact
+契约：一个版本只保存一个 ZIP 对象，逻辑 key 为：
+
+```text
+{encodedNamespaceId}/{resourceType}/{encodedResourceName}/{encodedVersion}/bundle.zip
+```
+
+路径段使用统一的 UTF-8 百分号编码；ASCII 字母、数字、`-`、`_`、`.` 和 `~` 保持可读，
+`/`、`%` 和其他字节必须编码，`.` 与 `..` 整段也必须编码。典型的 namespace、资源名和版本
+因此仍保持原样。ZIP 内部条目由资源类型拥有，但 OSS 对象层级、版本粒度和生命周期语义不得
+因资源类型而变化。
+
+OSS 版本的 `storage` 描述必须记录 `provider=oss`、`format=zip` 和不包含 OSS prefix 的
+`artifactKey`，并可以附加类型拥有的文件列表、摘要、媒体类型或 Schema 信息。配置的 provider
+只决定新版本；读取、草稿覆盖和删除必须使用版本行中持久化的 provider 和 artifact key。草稿
+可以覆盖固定对象，版本进入 `reviewing` 后内容冻结。OSS 是新功能，不定义逐文件对象、双读或
+迁移兼容；缺少 `format=zip` 或 `artifactKey` 的 OSS 描述无效。`nacos_config` 继续使用各类型
+已有的兼容格式。
+
 存储扩展行为由 [AI 存储插件规范](../plugin/ai-storage-plugin-spec.md)定义。数据库
 方言行为由 [数据源方言插件规范](../plugin/datasource-dialect-plugin-spec.md)定义。
 

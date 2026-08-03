@@ -105,6 +105,31 @@ The default storage implementation is Nacos Config based, but Config is only a
 storage backend here. AI resource content stored through `nacos_config` must not
 be treated as user-owned Config resources.
 
+When Prompt, Skill, AgentSpec, or Agent selects the `oss` provider, it must use
+the same version-level artifact contract: one version is stored as exactly one
+ZIP object with this logical key:
+
+```text
+{encodedNamespaceId}/{resourceType}/{encodedResourceName}/{encodedVersion}/bundle.zip
+```
+
+Path segments use one UTF-8 percent-encoding rule. ASCII letters, digits, `-`,
+`_`, `.`, and `~` remain readable; `/`, `%`, and all other bytes are encoded,
+and a complete `.` or `..` segment is encoded as well. Typical namespace,
+resource-name, and version values therefore remain unchanged. Each resource
+type owns its entries inside the archive, but OSS object hierarchy, version
+granularity, and lifecycle semantics must not vary by resource type.
+
+An OSS version's `storage` descriptor must record `provider=oss`, `format=zip`,
+and an `artifactKey` without the OSS prefix. It may add type-owned file lists,
+digests, media types, or schema metadata. The configured provider selects only
+new versions; reads, draft replacements, and deletes use the provider and
+artifact key persisted with the version row. A draft may replace its fixed
+object, while content is frozen after the version enters `reviewing`. OSS is a
+new feature and defines no per-file objects, dual reads, or migration
+compatibility; an OSS descriptor without `format=zip` or `artifactKey` is
+invalid. `nacos_config` keeps each type's existing compatibility format.
+
 Storage extension behavior is defined by the
 [AI Storage Plugin Spec](../plugin/ai-storage-plugin-spec.md). Database dialect
 behavior is defined by the [Data Source Dialect Plugin Spec](../plugin/datasource-dialect-plugin-spec.md).

@@ -156,16 +156,18 @@ service 实例，不属于 builder 或领域路由 key。
 和不透明的 `StorageKey.key` 组成；prefix 为空时直接使用不透明 key。Object key 必须满足
 OSS 的 1,023 字节限制。
 
-对于使用 ZIP artifact 的 Skill，新写入的 `StorageKey.key` 为：
+Prompt、Skill、AgentSpec 和 Agent 使用统一的 OSS ZIP artifact。新写入的
+`StorageKey.key` 为：
 
 ```text
-{namespaceId}/skill/{skillName}/{version}/bundle.zip
+{encodedNamespaceId}/{resourceType}/{encodedResourceName}/{encodedVersion}/bundle.zip
 ```
 
-因此默认 prefix 下的物理 object key 为
+因此对无需编码的典型 Skill 名称，默认 prefix 下的物理 object key 为
 `nacos/ai/{namespaceId}/skill/{skillName}/{version}/bundle.zip`。该层级以 namespace 为第一层
-隔离边界，以 AI resource type 为第二层管理边界。Skill 的 OSS 存储仅支持 storage descriptor
-明确记录的 ZIP artifact，不定义逐文件 OSS key 或双读兼容。
+隔离边界，以 AI resource type 为第二层管理边界。路径段编码和版本描述契约由
+[AI 资源模型规范](../ai/ai-resource-model-spec.md)定义。四类 AI Resource 的 OSS 存储都只支持
+storage descriptor 明确记录的 ZIP artifact，不定义逐文件 OSS key 或双读兼容。
 
 该 provider 必须精确保留字节、将不存在的对象视为缺失，并保持删除幂等。由于存储 SPI 返回
 `byte[]`，读写两侧都必须执行可配置的内存对象大小限制。OSS 的 object PUT、GET 和 DELETE

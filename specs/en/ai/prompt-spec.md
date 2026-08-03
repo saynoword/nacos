@@ -65,7 +65,16 @@ server may return a not-modified error.
 Subscriptions should report Prompt changes without exposing broad management
 listing behavior to runtime clients.
 
-## 5. Migration
+## 5. Storage
+
+Prompt follows the unified OSS ZIP artifact contract in the
+[AI Resource Model Spec](ai-resource-model-spec.md). A version selecting `oss`
+stores its complete `PromptVersionInfo` in one `bundle.zip` whose main entry is
+`content.json`. The version descriptor persists the provider, `format=zip`,
+and `artifactKey`; reads, draft replacements, and deletes must not reroute from
+current configuration or fall back to a per-file OSS format.
+
+## 6. Migration
 
 Prompt has a migration task from legacy Prompt storage to
 `ai_resource + ai_resource_version + AI storage`. Migration must:
@@ -75,7 +84,7 @@ Prompt has a migration task from legacy Prompt storage to
 - preserve existing versions and latest behavior where possible;
 - keep legacy mappings as compatibility storage, not formal Config semantics.
 
-## 6. Evolution Note
+## 7. Evolution Note
 
 Prompt formats, variable schemas, tool-call conventions, and model-provider
 requirements may change quickly. Prompt spec revisions may introduce new
