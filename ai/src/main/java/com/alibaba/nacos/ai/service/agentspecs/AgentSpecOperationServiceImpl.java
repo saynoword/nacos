@@ -1611,10 +1611,7 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         String version, String storageJson) throws NacosException {
         String provider = parseStorageProvider(storageJson);
         if (AiResourceStorageUtils.OSS_PROVIDER.equals(provider)) {
-            String artifactKey = parseStorageString(storageJson, "artifactKey");
-            if (!isZipStorage(storageJson) || StringUtils.isBlank(artifactKey)) {
-                return;
-            }
+            String artifactKey = requireOssArtifactKey(agentSpecName, version, storageJson);
             StorageKey bundleKey = new StorageKey(provider, artifactKey);
             storageRouter.route(bundleKey).delete(bundleKey);
             return;
@@ -1651,8 +1648,8 @@ public class AgentSpecOperationServiceImpl implements AgentSpecOperationService 
         String artifactKey = parseStorageString(storageJson, "artifactKey");
         if (!isZipStorage(storageJson) || StringUtils.isBlank(artifactKey)) {
             throw new NacosException(NacosException.SERVER_ERROR,
-                "OSS AgentSpec storage descriptor must use ZIP format: " + agentSpecName + "@"
-                    + version);
+                "OSS AgentSpec storage descriptor must use ZIP format and contain artifactKey: "
+                    + agentSpecName + "@" + version);
         }
         return artifactKey;
     }

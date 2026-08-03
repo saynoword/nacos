@@ -456,13 +456,7 @@ public class PromptOperationServiceImpl implements PromptOperationService {
             if (v == null) {
                 continue;
             }
-            try {
-                deletePromptStorageForVersion(namespaceId, promptKey, v.getVersion(),
-                    v.getStorage());
-            } catch (Exception e) {
-                LOGGER.warn("Failed to delete storage for prompt version: {}@{}", promptKey,
-                    v.getVersion(), e);
-            }
+            deletePromptStorageForVersion(namespaceId, promptKey, v.getVersion(), v.getStorage());
         }
         
         // Delete legacy latest mirror in nacos-ai-prompt group
@@ -855,21 +849,17 @@ public class PromptOperationServiceImpl implements PromptOperationService {
     }
     
     private void deletePromptStorageForVersion(String namespaceId, String promptKey,
-        String version, String storageJson) {
+        String version, String storageJson) throws NacosException {
+        String provider = parseStorageProvider(storageJson);
+        StorageKey storageKey;
+        if (AiResourceStorageUtils.OSS_PROVIDER.equals(provider)) {
+            storageKey = new StorageKey(provider,
+                requireOssArtifactKey(promptKey, version, storageJson));
+        } else {
+            storageKey = NacosConfigAiResourceStorage.buildStorageKey(provider, namespaceId,
+                RESOURCE_TYPE_PROMPT, promptKey, version, PromptUtils.PROMPT_MAIN_DATA_ID);
+        }
         try {
-            String provider = parseStorageProvider(storageJson);
-            StorageKey storageKey;
-            if (AiResourceStorageUtils.OSS_PROVIDER.equals(provider)) {
-                String artifactKey = parseStorageString(storageJson, "artifactKey");
-                if (!isZipStorage(storageJson) || StringUtils.isBlank(artifactKey)) {
-                    return;
-                }
-                storageKey = new StorageKey(provider, artifactKey);
-            } else {
-                storageKey = NacosConfigAiResourceStorage.buildStorageKey(provider, namespaceId,
-                    RESOURCE_TYPE_PROMPT, promptKey, version,
-                    PromptUtils.PROMPT_MAIN_DATA_ID);
-            }
             storageRouter.route(storageKey).delete(storageKey);
         } catch (Exception e) {
             LOGGER.warn("Failed to delete prompt storage: {}@{}", promptKey, version, e);
@@ -903,8 +893,8 @@ public class PromptOperationServiceImpl implements PromptOperationService {
         String artifactKey = parseStorageString(storageJson, "artifactKey");
         if (!isZipStorage(storageJson) || StringUtils.isBlank(artifactKey)) {
             throw new NacosException(NacosException.SERVER_ERROR,
-                "OSS Prompt storage descriptor must use ZIP format: " + promptKey + "@"
-                    + version);
+                "OSS Prompt storage descriptor must use ZIP format and contain artifactKey: "
+                    + promptKey + "@" + version);
         }
         return artifactKey;
     }

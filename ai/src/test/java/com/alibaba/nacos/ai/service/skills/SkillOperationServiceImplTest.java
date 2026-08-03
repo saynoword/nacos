@@ -2637,7 +2637,7 @@ class SkillOperationServiceImplTest {
     }
     
     @Test
-    void testDeleteDraftDoesNotFallbackForNonBundleOssStorage() throws NacosException {
+    void testDeleteDraftRejectsNonBundleOssStorage() throws NacosException {
         String namespaceId = "test-ns";
         String skillName = "my-skill";
         AiResource meta = new AiResource();
@@ -2660,8 +2660,40 @@ class SkillOperationServiceImplTest {
         when(aiResourcePersistService.updateMetaCas(eq(namespaceId), eq(skillName), eq("skill"),
             eq(1L), any())).thenReturn(true);
         
-        skillOperationService.deleteDraft(namespaceId, skillName);
+        NacosException exception = assertThrows(NacosException.class,
+            () -> skillOperationService.deleteDraft(namespaceId, skillName));
         
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        assertTrue(exception.getMessage().contains("artifactKey"));
+        verify(ossStorage, never()).delete(any(StorageKey.class));
+        verify(storage, never()).delete(any(StorageKey.class));
+    }
+    
+    @Test
+    void testDeleteSkillRejectsOssStorageWithoutArtifactKey() throws NacosException {
+        String namespaceId = "test-namespace";
+        String skillName = "test-skill";
+        AiResource meta = new AiResource();
+        meta.setName(skillName);
+        meta.setType("skill");
+        meta.setStatus("enable");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(skillName), anyString()))
+            .thenReturn(meta);
+        com.alibaba.nacos.ai.model.AiResourceVersion version =
+            new com.alibaba.nacos.ai.model.AiResourceVersion();
+        version.setVersion("v1");
+        version.setStorage("{\"provider\":\"oss\",\"format\":\"zip\","
+            + "\"files\":[\"SKILL.md\"]}");
+        Page<com.alibaba.nacos.ai.model.AiResourceVersion> versionPage = new Page<>();
+        versionPage.setPageItems(List.of(version));
+        when(aiResourceVersionPersistService.list(eq(namespaceId), eq(skillName), anyString(),
+            isNull(), anyInt(), anyInt())).thenReturn(versionPage);
+        
+        NacosException exception = assertThrows(NacosException.class,
+            () -> skillOperationService.deleteSkill(namespaceId, skillName));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        assertTrue(exception.getMessage().contains("artifactKey"));
         verify(ossStorage, never()).delete(any(StorageKey.class));
         verify(storage, never()).delete(any(StorageKey.class));
     }

@@ -1032,6 +1032,35 @@ class AgentSpecOperationServiceImplTest {
     }
     
     @Test
+    void testDeleteAgentSpecRejectsOssStorageWithoutArtifactKey() throws NacosException {
+        String namespaceId = "test-ns";
+        String name = "my-agentspec";
+        AiResource meta = new AiResource();
+        meta.setName(name);
+        meta.setType("agentspec");
+        meta.setNamespaceId(namespaceId);
+        meta.setStatus("enable");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(name), anyString()))
+            .thenReturn(meta);
+        AiResourceVersion version = new AiResourceVersion();
+        version.setVersion("v1");
+        version.setStatus("online");
+        version.setStorage("{\"provider\":\"oss\",\"format\":\"zip\"}");
+        Page<AiResourceVersion> versionPage = new Page<>();
+        versionPage.setPageItems(List.of(version));
+        when(aiResourceVersionPersistService.list(eq(namespaceId), eq(name), eq("agentspec"),
+            isNull(), anyInt(), anyInt())).thenReturn(versionPage);
+        
+        NacosException exception = assertThrows(NacosException.class,
+            () -> service.deleteAgentSpec(namespaceId, name));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        assertTrue(exception.getMessage().contains("artifactKey"));
+        verify(ossStorage, never()).delete(any(StorageKey.class));
+        verify(storage, never()).delete(any(StorageKey.class));
+    }
+    
+    @Test
     void testDeleteAgentSpecMetaNull() throws NacosException {
         String namespaceId = "test-ns";
         String name = "nonexistent";
@@ -1300,6 +1329,38 @@ class AgentSpecOperationServiceImplTest {
         service.deleteDraft(namespaceId, name);
         
         verify(ossStorage).delete(argThat(key -> artifactKey.equals(key.getKey())));
+        verify(storage, never()).delete(any(StorageKey.class));
+    }
+    
+    @Test
+    void testDeleteDraftRejectsOssStorageWithoutZipFormat() throws NacosException {
+        String namespaceId = "test-ns";
+        String name = "my-agentspec";
+        AiResource meta = new AiResource();
+        meta.setName(name);
+        meta.setType("agentspec");
+        meta.setNamespaceId(namespaceId);
+        meta.setStatus("enable");
+        meta.setMetaVersion(1L);
+        meta.setVersionInfo("{\"editingVersion\":\"v2\",\"labels\":{},\"onlineCnt\":1}");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(name), anyString()))
+            .thenReturn(meta);
+        AiResourceVersion versionRow = new AiResourceVersion();
+        versionRow.setVersion("v2");
+        versionRow.setStatus("draft");
+        versionRow.setStorage("{\"provider\":\"oss\","
+            + "\"artifactKey\":\"test-ns/agentspec/my-agentspec/v2/bundle.zip\"}");
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(name), anyString(), eq("v2")))
+            .thenReturn(versionRow);
+        when(aiResourcePersistService.updateMetaCas(eq(namespaceId), eq(name), eq("agentspec"),
+            eq(1L), any())).thenReturn(true);
+        
+        NacosException exception = assertThrows(NacosException.class,
+            () -> service.deleteDraft(namespaceId, name));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        assertTrue(exception.getMessage().contains("artifactKey"));
+        verify(ossStorage, never()).delete(any(StorageKey.class));
         verify(storage, never()).delete(any(StorageKey.class));
     }
     

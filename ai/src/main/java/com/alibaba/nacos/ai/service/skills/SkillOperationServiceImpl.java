@@ -2030,7 +2030,15 @@ public class SkillOperationServiceImpl implements SkillOperationService {
         String storageJson)
         throws NacosException {
         String provider = parseStorageProvider(storageJson);
-        if (STORAGE_PROVIDER_OSS.equals(provider) && !isZipStorage(storageJson)) {
+        if (STORAGE_PROVIDER_OSS.equals(provider)) {
+            String artifactKey = parseStorageString(storageJson, STORAGE_KEY_ARTIFACT);
+            if (!isZipStorage(storageJson) || StringUtils.isBlank(artifactKey)) {
+                throw new NacosException(NacosException.SERVER_ERROR,
+                    "OSS Skill storage descriptor must use ZIP format and contain artifactKey: "
+                        + skillName + "@" + version);
+            }
+            StorageKey key = new StorageKey(provider, artifactKey);
+            storageRouter.route(key).delete(key);
             return;
         }
         if (isZipStorage(storageJson)) {

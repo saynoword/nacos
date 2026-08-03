@@ -403,6 +403,29 @@ class PromptOperationServiceImplTest {
     }
     
     @Test
+    void testDeleteDraftRejectsOssStorageWithoutZipFormat() throws NacosException {
+        AiResource meta =
+            createMeta(PROMPT_KEY, 1L, "{\"labels\":{},\"editingVersion\":\"0.0.1\"}");
+        when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(meta);
+        AiResourceVersion draft = createVersionRow("0.0.1", "draft");
+        draft.setStorage("{\"provider\":\"oss\","
+            + "\"artifactKey\":\"public/prompt/test-prompt/0.0.1/bundle.zip\","
+            + "\"files\":[\"content.json\"]}");
+        when(aiResourceVersionPersistService.find(NS, PROMPT_KEY, PROMPT_TYPE, "0.0.1"))
+            .thenReturn(draft);
+        when(aiResourcePersistService.updateMetaCas(eq(NS), eq(PROMPT_KEY), eq(PROMPT_TYPE),
+            eq(1L), any(AiResource.class))).thenReturn(true);
+        
+        NacosException exception = assertThrows(NacosException.class,
+            () -> service.deleteDraft(NS, PROMPT_KEY));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        assertTrue(exception.getMessage().contains("artifactKey"));
+        verify(ossStorage, never()).delete(any(StorageKey.class));
+        verify(storage, never()).delete(any(StorageKey.class));
+    }
+    
+    @Test
     void testDeleteDraftShouldDoNothingWhenNoEditing() throws NacosException {
         AiResource meta = createMeta(PROMPT_KEY, 1L, "{\"labels\":{}}");
         when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(meta);
@@ -978,6 +1001,29 @@ class PromptOperationServiceImplTest {
         
         verify(aiResourceVersionPersistService).deleteByNameAndType(NS, PROMPT_KEY, PROMPT_TYPE);
         verify(aiResourcePersistService).delete(NS, PROMPT_KEY, PROMPT_TYPE);
+    }
+    
+    @Test
+    void testDeletePromptRejectsOssStorageWithoutArtifactKey() throws NacosException {
+        AiResource meta = createMeta(PROMPT_KEY, 1L, "{\"labels\":{}}");
+        when(aiResourcePersistService.find(NS, PROMPT_KEY, PROMPT_TYPE)).thenReturn(meta);
+        AiResourceVersion version = createVersionRow("0.0.1", "online");
+        version.setStorage("{\"provider\":\"oss\",\"format\":\"zip\","
+            + "\"files\":[\"content.json\"]}");
+        Page<AiResourceVersion> versionPage = new Page<>();
+        versionPage.setPageItems(Collections.singletonList(version));
+        when(aiResourceVersionPersistService.list(eq(NS), eq(PROMPT_KEY), eq(PROMPT_TYPE), any(),
+            eq(1), eq(200))).thenReturn(versionPage);
+        
+        NacosException exception = assertThrows(NacosException.class,
+            () -> service.deletePrompt(NS, PROMPT_KEY));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        assertTrue(exception.getMessage().contains("artifactKey"));
+        verify(ossStorage, never()).delete(any(StorageKey.class));
+        verify(aiResourceVersionPersistService, never()).deleteByNameAndType(anyString(),
+            anyString(), anyString());
+        verify(aiResourcePersistService, never()).delete(anyString(), anyString(), anyString());
     }
     
     @Test
