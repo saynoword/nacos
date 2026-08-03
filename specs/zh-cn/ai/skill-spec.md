@@ -137,6 +137,18 @@ AI 存储保存。默认存储为 `nacos_config`，但它只是实现后端。
 按该版本已持久化的 provider 路由。Skill 存储 provider 配置只控制新写入，不得重定向已有
 版本。缺少 `provider` 的历史存储描述归属于 `nacos_config`。
 
+当新写入版本选择 `oss` provider 时，服务端必须先完成 Skill 包解析、校验和规范化，再将
+完整 Skill 保存为单个 ZIP artifact。该 artifact 使用固定逻辑 key：
+
+```text
+{namespaceId}/skill/{skillName}/{version}/bundle.zip
+```
+
+`ai_resource_version.storage` 必须记录 `provider=oss`、`format=zip`、不包含 OSS prefix 的
+`artifactKey`、逻辑文件列表 `files` 和内容摘要。`files` 继续用于 manifest 和文件边界描述，
+不表示 OSS 中存在对应的逐文件对象。缺少 `format=zip` 的历史描述仍按逐文件格式读取和删除，
+不得因启用 ZIP artifact 而失效。
+
 Skill 还维护一个轻量 manifest 以支持客户端发现。Manifest 是从 Skill 元数据派生的
 索引，不应成为生命周期状态的事实来源。
 
@@ -148,6 +160,10 @@ Skill 遵循共享的 [AI 资源生命周期规范](ai-resource-lifecycle-spec.m
 
 - upload 根据请求选项创建或覆盖 draft；
 - upload 可以接收可选 commit message，创建或覆盖 draft 版本时必须保存为该版本描述；
+- OSS 中的 draft 使用固定 `bundle.zip` key，create、update、upload overwrite 和 redraft 后的
+  update 可以直接覆盖该对象；
+- 版本进入 `reviewing` 后必须冻结内容。`reviewing`、`reviewed`、`online` 和 `offline` 版本
+  不得覆盖 artifact；只有显式 redraft 回到 `draft` 后才能再次覆盖；
 - bootstrap 内置 Skill 可以直接创建 online 元数据和版本行；
 - 提交 draft 或 reviewed 版本可以运行发布流水线，并发布或保留为 reviewed；提交
   reviewing 版本应按幂等调用返回；
@@ -160,6 +176,9 @@ Skill 遵循共享的 [AI 资源生命周期规范](ai-resource-lifecycle-spec.m
 
 运行时客户端可以按 latest、明确版本或 label 下载 Skill ZIP 内容。支持时，下载应增加
 计数并发出 Trace 或下载事件。
+
+管理接口可以读取 draft 版本用于编辑和版本对比；运行时查询只能解析 manifest 中可查询的
+online 版本，不能发现 draft、reviewing、reviewed 或 offline artifact。
 
 运行时客户端不应获得 upload、publish、delete 或无限制列表等宽管理能力。
 

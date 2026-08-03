@@ -174,6 +174,21 @@ provider. The configured Skill storage provider controls new writes only and
 must not redirect existing versions. A legacy descriptor without `provider`
 belongs to `nacos_config`.
 
+When a newly written version selects the `oss` provider, the server must parse,
+validate, and normalize the Skill package before storing the complete Skill as
+one ZIP artifact. The artifact uses this fixed logical key:
+
+```text
+{namespaceId}/skill/{skillName}/{version}/bundle.zip
+```
+
+`ai_resource_version.storage` must record `provider=oss`, `format=zip`, an
+`artifactKey` without the OSS prefix, the logical `files` list, and the content
+digest. `files` remains the manifest and package-boundary description; it does
+not imply that OSS contains one object per file. Historical descriptors without
+`format=zip` continue to use the per-file read and delete format and must remain
+valid after ZIP artifacts are enabled.
+
 Skill also maintains a lightweight manifest for client-side discovery. The
 manifest is an index derived from Skill metadata and must not become the source
 of truth for lifecycle state.
@@ -188,6 +203,11 @@ Skill follows the shared [AI Resource Lifecycle Spec](ai-resource-lifecycle-spec
 - upload creates or overwrites a draft according to request options;
 - upload may accept an optional commit message and must store it as the draft
   version description when a draft version is created or overwritten;
+- an OSS-backed draft uses a fixed `bundle.zip` key. Create, update, upload
+  overwrite, and update after redraft may replace that object directly;
+- content becomes immutable when the version enters `reviewing`.
+  `reviewing`, `reviewed`, `online`, and `offline` artifacts must not be
+  overwritten; only an explicit redraft to `draft` permits another overwrite;
 - bootstrap built-in Skill may directly create online metadata and version
   rows;
 - submitting a draft or reviewed version may run publish pipeline and then
@@ -206,6 +226,10 @@ must not recursively import dependencies by default.
 Runtime clients may download Skill ZIP content by latest, explicit version, or
 label. Downloads should increment counters and emit trace or download events
 where supported.
+
+Management APIs may read draft versions for editing and version comparison.
+Runtime queries can resolve only queryable online versions present in the
+manifest and cannot discover draft, reviewing, reviewed, or offline artifacts.
 
 Runtime clients should not receive broad management operations such as upload,
 publish, delete, or unrestricted listing.

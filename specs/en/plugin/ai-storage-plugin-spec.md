@@ -188,6 +188,19 @@ owns the provider's objects. The physical object key is the normalized optional
 prefix followed by `/` and the opaque `StorageKey.key`; an empty prefix uses the
 opaque key directly. Object keys must satisfy the OSS 1,023-byte limit.
 
+For a Skill stored as a ZIP artifact, a newly written `StorageKey.key` is:
+
+```text
+{namespaceId}/skill/{skillName}/{version}/bundle.zip
+```
+
+With the default prefix, the physical object key is
+`nacos/ai/{namespaceId}/skill/{skillName}/{version}/bundle.zip`. This hierarchy
+uses namespace as the first isolation boundary and AI resource type as the
+second management boundary. It applies only to ZIP artifacts explicitly
+recorded by the storage descriptor. The provider must not rewrite historical
+per-file keys and must continue to access them as their original opaque keys.
+
 The provider preserves bytes exactly, treats missing objects as absent, and
 keeps delete idempotent. It enforces a configurable in-memory object-size limit
 on both writes and reads because the storage SPI returns `byte[]`. OSS object
