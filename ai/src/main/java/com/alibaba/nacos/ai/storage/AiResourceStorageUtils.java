@@ -20,6 +20,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -74,6 +78,30 @@ public final class AiResourceStorageUtils {
             zipOutput.putNextEntry(entry);
             zipOutput.write(content);
             zipOutput.closeEntry();
+            zipOutput.finish();
+            return output.toByteArray();
+        }
+    }
+    
+    /**
+     * Create a deterministic ZIP from the supplied entries.
+     *
+     * @param entries entry names and contents
+     * @return ZIP bytes
+     * @throws IOException when the ZIP cannot be created
+     */
+    public static byte[] zipEntries(Map<String, byte[]> entries) throws IOException {
+        List<String> entryNames = new ArrayList<>(entries.keySet());
+        Collections.sort(entryNames);
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream();
+            ZipOutputStream zipOutput = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+            for (String entryName : entryNames) {
+                ZipEntry entry = new ZipEntry(entryName);
+                entry.setTime(0L);
+                zipOutput.putNextEntry(entry);
+                zipOutput.write(entries.get(entryName));
+                zipOutput.closeEntry();
+            }
             zipOutput.finish();
             return output.toByteArray();
         }

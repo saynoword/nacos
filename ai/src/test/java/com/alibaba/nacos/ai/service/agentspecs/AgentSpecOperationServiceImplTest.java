@@ -27,6 +27,8 @@ import com.alibaba.nacos.ai.service.repository.AiResourcePersistService;
 import com.alibaba.nacos.ai.service.repository.AiResourceVersionPersistService;
 import com.alibaba.nacos.ai.service.resource.AiResourceManager;
 import com.alibaba.nacos.ai.service.resource.PublishPipelineInfo;
+import com.alibaba.nacos.ai.storage.AiResourceStorageUtils;
+import com.alibaba.nacos.ai.utils.AgentSpecZipParser;
 import com.alibaba.nacos.api.ai.model.pipeline.PipelineExecutionStatus;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpec;
 import com.alibaba.nacos.api.ai.model.agentspecs.AgentSpecBasicInfo;
@@ -91,6 +93,9 @@ class AgentSpecOperationServiceImplTest {
     private AiResourceStorage storage;
     
     @Mock
+    private AiResourceStorage ossStorage;
+    
+    @Mock
     private AiResourcePersistService aiResourcePersistService;
     
     @Mock
@@ -113,7 +118,9 @@ class AgentSpecOperationServiceImplTest {
         EnvUtil.setEnvironment(new StandardEnvironment());
         AiResourceStorageRouter.reset();
         lenient().when(storage.type()).thenReturn("nacos_config");
+        lenient().when(ossStorage.type()).thenReturn("oss");
         AiResourceStorageRouter.join(storage);
+        AiResourceStorageRouter.join(ossStorage);
         PublishPipelineManager pipelineManager = TestAiPipelineSupport.newManager(false,
             List.of(), List.of());
         PublishPipelineExecutor publishPipelineExecutor = new PublishPipelineExecutor(
@@ -138,6 +145,7 @@ class AgentSpecOperationServiceImplTest {
         }
         AiResourceStorageRouter.reset();
         TestAiPipelineSupport.clearStateChecker();
+        System.clearProperty("nacos.ai.agentspec.storage.provider");
         EnvUtil.setEnvironment(CACHED_ENVIRONMENT);
     }
     
@@ -204,6 +212,36 @@ class AgentSpecOperationServiceImplTest {
         assertEquals("0.0.1", ((Map<?, ?>) versionInfo.get("labels")).get("latest"));
         
         verify(storage, times(1)).save(any(StorageKey.class), any(byte[].class));
+    }
+    
+    @Test
+    void bootstrapAgentSpecFromZipShouldStoreOneOssBundle() throws Exception {
+        String namespaceId = "public";
+        System.setProperty("nacos.ai.agentspec.storage.provider", "oss");
+        when(aiResourcePersistService.find(eq(namespaceId), eq("测试坐席"), anyString()))
+            .thenReturn(null);
+        
+        service.bootstrapAgentSpecFromZip(namespaceId, createValidZipBytesWithAgents());
+        
+        ArgumentCaptor<StorageKey> keyCaptor = ArgumentCaptor.forClass(StorageKey.class);
+        ArgumentCaptor<byte[]> bundleCaptor = ArgumentCaptor.forClass(byte[].class);
+        verify(ossStorage).save(keyCaptor.capture(), bundleCaptor.capture());
+        String artifactKey = AiResourceStorageUtils.buildBundleKey(namespaceId, "agentspec",
+            "测试坐席", "0.0.1");
+        assertEquals(artifactKey, keyCaptor.getValue().getKey());
+        AgentSpec stored = AgentSpecZipParser.parseAgentSpecFromZip(bundleCaptor.getValue(),
+            namespaceId);
+        assertEquals("测试坐席", stored.getName());
+        assertTrue(stored.getResource().values().stream()
+            .anyMatch(resource -> "AGENTS.md".equals(resource.getName())));
+        ArgumentCaptor<AiResourceVersion> versionCaptor =
+            ArgumentCaptor.forClass(AiResourceVersion.class);
+        verify(aiResourceVersionPersistService).insert(versionCaptor.capture());
+        assertTrue(versionCaptor.getValue().getStorage().contains("\"provider\":\"oss\""));
+        assertTrue(versionCaptor.getValue().getStorage().contains("\"format\":\"zip\""));
+        assertTrue(versionCaptor.getValue().getStorage()
+            .contains("\"artifactKey\":\"" + artifactKey + "\""));
+        verify(storage, never()).save(any(StorageKey.class), any(byte[].class));
     }
     
     @Test
@@ -803,6 +841,59 @@ class AgentSpecOperationServiceImplTest {
     }
     
     @Test
+    void testGetAgentSpecVersionDetailReadsPersistedOssBundle() throws Exception {
+        String namespaceId = "test-ns";
+        String name = "my-agentspec";
+        AiResource meta = new AiResource();
+        meta.setName(name);
+        meta.setType("agentspec");
+        meta.setStatus("enable");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(name), anyString()))
+            .thenReturn(meta);
+        AiResourceVersion versionRow = new AiResourceVersion();
+        versionRow.setVersion("v1");
+        versionRow.setStatus("online");
+        String artifactKey = AiResourceStorageUtils.buildBundleKey(namespaceId, "agentspec", name,
+            "v1");
+        versionRow.setStorage(ossStorageJson(artifactKey));
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(name), anyString(), eq("v1")))
+            .thenReturn(versionRow);
+        when(ossStorage.get(argThat(key -> artifactKey.equals(key.getKey()))))
+            .thenReturn(createZipBytes("manifest.json",
+                "{\"version\":\"1.0\",\"worker\":{\"suggested_name\":\"my-agentspec\"}}"));
+        
+        AgentSpec result = service.getAgentSpecVersionDetail(namespaceId, name, "v1");
+        
+        assertEquals(name, result.getName());
+        verify(storage, never()).get(any(StorageKey.class));
+    }
+    
+    @Test
+    void testGetAgentSpecVersionDetailRejectsNonBundleOssStorage() throws NacosException {
+        String namespaceId = "test-ns";
+        String name = "my-agentspec";
+        AiResource meta = new AiResource();
+        meta.setName(name);
+        meta.setType("agentspec");
+        meta.setStatus("enable");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(name), anyString()))
+            .thenReturn(meta);
+        AiResourceVersion versionRow = new AiResourceVersion();
+        versionRow.setVersion("v1");
+        versionRow.setStatus("online");
+        versionRow.setStorage("{\"provider\":\"oss\"}");
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(name), anyString(), eq("v1")))
+            .thenReturn(versionRow);
+        
+        NacosException exception = assertThrows(NacosException.class,
+            () -> service.getAgentSpecVersionDetail(namespaceId, name, "v1"));
+        
+        assertEquals(NacosException.SERVER_ERROR, exception.getErrCode());
+        verify(ossStorage, never()).get(any(StorageKey.class));
+        verify(storage, never()).get(any(StorageKey.class));
+    }
+    
+    @Test
     void testGetAgentSpecVersionDetailBlankVersion() {
         String namespaceId = "test-ns";
         String name = "my-agentspec";
@@ -1091,6 +1182,45 @@ class AgentSpecOperationServiceImplTest {
     }
     
     @Test
+    void testUpdateDraftKeepsPersistedOssBundle() throws NacosException {
+        String namespaceId = "test-ns";
+        String name = "my-agentspec";
+        String artifactKey = AiResourceStorageUtils.buildBundleKey(namespaceId, "agentspec", name,
+            "v2");
+        AiResource meta = new AiResource();
+        meta.setName(name);
+        meta.setType("agentspec");
+        meta.setNamespaceId(namespaceId);
+        meta.setStatus("enable");
+        meta.setMetaVersion(1L);
+        meta.setVersionInfo("{\"editingVersion\":\"v2\",\"labels\":{},\"onlineCnt\":1}");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(name), anyString()))
+            .thenReturn(meta);
+        AiResourceVersion versionRow = new AiResourceVersion();
+        versionRow.setVersion("v2");
+        versionRow.setStatus("draft");
+        versionRow.setStorage(ossStorageJson(artifactKey));
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(name), anyString(), eq("v2")))
+            .thenReturn(versionRow);
+        when(aiResourcePersistService.updateMetaCas(eq(namespaceId), eq(name), eq("agentspec"),
+            eq(1L), any())).thenReturn(true);
+        AgentSpec draft = new AgentSpec();
+        draft.setName(name);
+        draft.setDescription("updated desc");
+        draft.setContent(
+            "{\"version\":\"1.0\",\"worker\":{\"suggested_name\":\"my-agentspec\"}}");
+        
+        service.updateDraft(namespaceId, draft);
+        
+        verify(ossStorage).save(argThat(key -> artifactKey.equals(key.getKey())),
+            any(byte[].class));
+        verify(storage, never()).save(any(StorageKey.class), any(byte[].class));
+        verify(aiResourceVersionPersistService).updateStorageAndDesc(eq(namespaceId), eq(name),
+            eq("agentspec"), eq("v2"), argThat(storageJson -> storageJson.contains(artifactKey)),
+            eq("updated desc"));
+    }
+    
+    @Test
     void testUpdateDraftNullAgentSpec() {
         NacosApiException ex = assertThrows(NacosApiException.class,
             () -> service.updateDraft("test-ns", null));
@@ -1141,6 +1271,36 @@ class AgentSpecOperationServiceImplTest {
         service.deleteDraft(namespaceId, name);
         verify(aiResourceVersionPersistService).delete(eq(namespaceId), eq(name), eq("agentspec"),
             eq("v2"));
+    }
+    
+    @Test
+    void testDeleteDraftDeletesPersistedOssBundle() throws NacosException {
+        String namespaceId = "test-ns";
+        String name = "my-agentspec";
+        String artifactKey = AiResourceStorageUtils.buildBundleKey(namespaceId, "agentspec", name,
+            "v2");
+        AiResource meta = new AiResource();
+        meta.setName(name);
+        meta.setType("agentspec");
+        meta.setNamespaceId(namespaceId);
+        meta.setStatus("enable");
+        meta.setMetaVersion(1L);
+        meta.setVersionInfo("{\"editingVersion\":\"v2\",\"labels\":{},\"onlineCnt\":1}");
+        when(aiResourcePersistService.find(eq(namespaceId), eq(name), anyString()))
+            .thenReturn(meta);
+        AiResourceVersion versionRow = new AiResourceVersion();
+        versionRow.setVersion("v2");
+        versionRow.setStatus("draft");
+        versionRow.setStorage(ossStorageJson(artifactKey));
+        when(aiResourceVersionPersistService.find(eq(namespaceId), eq(name), anyString(), eq("v2")))
+            .thenReturn(versionRow);
+        when(aiResourcePersistService.updateMetaCas(eq(namespaceId), eq(name), eq("agentspec"),
+            eq(1L), any())).thenReturn(true);
+        
+        service.deleteDraft(namespaceId, name);
+        
+        verify(ossStorage).delete(argThat(key -> artifactKey.equals(key.getKey())));
+        verify(storage, never()).delete(any(StorageKey.class));
     }
     
     @Test
@@ -1514,6 +1674,11 @@ class AgentSpecOperationServiceImplTest {
             + "\"tags\":[\"design\",\"ux\"],"
             + "\"worker\":{\"suggested_name\":\"测试坐席\"}}";
         return createZipBytes("manifest.json", manifest);
+    }
+    
+    private String ossStorageJson(String artifactKey) {
+        return "{\"provider\":\"oss\",\"format\":\"zip\",\"artifactKey\":\""
+            + artifactKey + "\"}";
     }
     
     private byte[] createValidZipBytesWithAgents() throws IOException {
